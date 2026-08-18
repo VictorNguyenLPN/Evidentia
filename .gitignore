@@ -7,3 +7,9 @@ data/data.json
 evidentia.egg-info
 
 __pycache__/
+
+.txt
+
+.ipynb
+
+node_modules/

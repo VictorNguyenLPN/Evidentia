@@ -1,5 +1,6 @@
 import json
-from src.config import DATA_DIR
+# pyrefly: ignore [missing-import]
+from backend.config import DATA_DIR
 
 origin_data_path = DATA_DIR / "data.json"
 example_data_path = DATA_DIR / "data.json.example"

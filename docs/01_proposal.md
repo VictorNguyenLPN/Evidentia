@@ -1,6 +1,9 @@
 # Agentic-RAG Cho **Luật Việt Nam**
 
-Đây là một đề tài khóa luận **rõ ràng, khả thi và có giá trị thực tiễn cao** nếu thu hẹp mục tiêu thành hệ thống tra cứu văn bản pháp luật Việt Nam theo **thời điểm hiệu lực, phiên bản văn bản, và tóm tắt thay đổi có dẫn nguồn** thay vì cố giải toàn bộ “legal reasoning” tổng quát. Nền tảng khoa học của đề tài khá vững ở ba mảng: legal IR/QA và RAG cho luật, mô hình agentic cho truy hồi-lập kế hoạch-lặp cải tiến, và nghiên cứu về tri thức thay đổi theo thời gian; nhưng khoảng trống vẫn còn rõ ở chỗ **ít hệ thống nào xử lý đồng thời tính hiệu lực, tính thời điểm, so sánh phiên bản, và kiểm chứng nguồn trong bối cảnh luật Việt Nam** [1] [2] [3] [4].
+Đây là một đề tài khóa luận **rõ ràng, khả thi và có giá trị thực tiễn cao**
+nếu thu hẹp mục tiêu thành hệ thống tra cứu văn bản pháp luật Việt Nam
+theo **thời điểm hiệu lực, phiên bản văn bản, và tóm tắt thay đổi có dẫn nguồn**
+thay vì cố giải toàn bộ “legal reasoning” tổng quát. Nền tảng khoa học của đề tài khá vững ở ba mảng: legal IR/QA và RAG cho luật, mô hình agentic cho truy hồi-lập kế hoạch-lặp cải tiến, và nghiên cứu về tri thức thay đổi theo thời gian; nhưng khoảng trống vẫn còn rõ ở chỗ **ít hệ thống nào xử lý đồng thời tính hiệu lực, tính thời điểm, so sánh phiên bản, và kiểm chứng nguồn trong bối cảnh luật Việt Nam** [1] [2] [3] [4].
 
 ## Phát Biểu Bài Toán
 
@@ -29,7 +32,7 @@ Bảng dưới đây tóm tắt các khoảng trống trực tiếp liên quan �
 
 Khoảng trống quan trọng nhất là temporal validity. Nghiên cứu về RAG thời gian cho thấy semantic matching thường lấy nhầm tài liệu cũ hoặc không phù hợp với ràng buộc thời gian trong câu hỏi, trong khi benchmark hiện tại vẫn thiên về kiến thức tĩnh [3].
 
-Khoảng trống thứ hai là legal hallucination chưa được giải quyết chỉ bằng RAG. Đánh giá trên công cụ nghiên cứu pháp lý thương mại cho thấy hallucination giảm nhưng không biến mất; tỉ lệ vẫn ở mức 17–33%, nên đề tài của bạn cần lớp xác minh hiệu lực và provenance thay vì chỉ “retrieve rồi generate” [11] [8].
+Khoảng trống thứ hai là legal hallucination chưa được giải quyết chỉ bằng RAG. Đánh giá trên công cụ nghiên cứu pháp lý thương mại cho thấy hallucination giảm nhưng không biến mất; tỉ lệ vẫn ở mức 17–33%, nên đề tài của cần lớp xác minh hiệu lực và provenance thay vì chỉ “retrieve rồi generate” [11] [8].
 
 ## Tổng Quan Tài Liệu
 
@@ -39,7 +42,7 @@ Một hướng khác ở Việt Nam đã xây tập lớn 300,000 văn bản quy
 
 Ở tầng tri thức cấu trúc, linked data/ontology cho luật Việt Nam đã được đề xuất trên khoảng 325,000 văn bản, với mục tiêu hỗ trợ legal search, QA và document similarity; điều này ủng hộ mạnh cho việc dùng **graph metadata về sửa đổi, thay thế, bãi bỏ, dẫn chiếu** như một lớp bổ trợ cho Agentic-RAG [4].
 
-| Hướng nghiên cứu | Điểm mạnh | Điểm yếu với đề tài của bạn |
+| Hướng nghiên cứu | Điểm mạnh | Điểm yếu với đề tài |
 |---|---|---|
 | Retrieval/QA pháp lý Việt Nam | Có dữ liệu thực và baseline retrieval [21] [22]| Chưa mô hình hóa version history, hiệu lực, diff |
 | Legal RAG | Giảm hallucination, tăng groundedness [1] [23]| Chưa đảm bảo temporal validity, doctrinal correctness |
@@ -72,11 +75,13 @@ Một bộ research questions gọn và mạnh cho khóa luận là:
 | Legal grounding | GAP | GAP | GAP | GAP | GAP |
 | Agent orchestration | GAP | GAP | GAP | GAP | GAP |
 
-Khoảng trống nổi bật nhất là ô giao giữa **temporal validity** và **evaluation**: nhiều benchmark RAG đo answer quality nhưng không đo nguồn có còn hợp lệ tại thời điểm hỏi hay không [5]. Khoảng trống thứ hai là **version linking** trong luật Việt Nam: dữ liệu retrieval hiện có đã loại phiên bản cũ để đơn giản hóa bài toán, nên chưa hỗ trợ đánh giá diff hay chain sửa đổi-bãi bỏ thực sự [21]. Khoảng trống thứ ba là **human validation** cho legal RAG tiếng Việt, dù nhiều nghiên cứu đều nhấn mạnh expert review là cần thiết trong miền rủi ro cao [14] [11] [25].
+Khoảng trống nổi bật nhất là ô giao giữa **temporal validity** và **evaluation**: nhiều benchmark RAG đo answer quality nhưng không đo nguồn có còn hợp lệ tại thời điểm hỏi hay không [5].
+Khoảng trống thứ hai là **version linking** trong luật Việt Nam: dữ liệu retrieval hiện có đã loại phiên bản cũ để đơn giản hóa bài toán, nên chưa hỗ trợ đánh giá diff hay chain sửa đổi-bãi bỏ thực sự [21].
+Khoảng trống thứ ba là **human validation** cho legal RAG tiếng Việt, dù nhiều nghiên cứu đều nhấn mạnh expert review là cần thiết trong miền rủi ro cao [14] [11] [25].
 
 ## Dataset, Baseline Và Đánh Giá
 
-Dataset tốt nhất cho khóa luận nên là **dataset tự xây cho Luật Việt Nam**, vì chưa có benchmark công khai nào bám đúng bài toán “tra cứu + hiệu lực + so sánh + cập nhật”. Bạn có thể tận dụng hạ tầng crawl/normalize đã được chứng minh khả thi trên văn bản luật Việt Nam và mở rộng sang lưu **tất cả phiên bản** thay vì chỉ giữ bản mới nhất [21] [22].
+Dataset tốt nhất cho khóa luận nên là **dataset tự xây cho Luật Việt Nam**, vì chưa có benchmark công khai nào bám đúng bài toán “tra cứu + hiệu lực + so sánh + cập nhật”. Có thể tận dụng hạ tầng crawl/normalize đã được chứng minh khả thi trên văn bản luật Việt Nam và mở rộng sang lưu **tất cả phiên bản** thay vì chỉ giữ bản mới nhất [21] [22].
 
 Nên thiết kế dataset thành 4 tập con:
 
@@ -97,7 +102,7 @@ Nên thiết kế dataset thành 4 tập con:
 
 Về metric, retrieval nên dùng Recall@k, NDCG@k, MRR vì đây là chuẩn lặp lại nhiều nhất trong legal retrieval và legal RAG [21] [37]. Generation không nên chỉ dùng BLEU/ROUGE vì chúng bỏ sót tính factual/legal correctness; cần thêm faithfulness, answer relevance, context relevance, citation accuracy, và human expert scoring [1] [17] [42] [35].
 
-Điểm mới nên là metric thời gian. Bạn có thể chuyển ý tưởng RAS/RAR/TMR sang pháp luật Việt Nam để đo **nguồn trích dẫn có còn hiệu lực tại thời điểm hỏi hay không**, tách biệt với chuyện answer text nghe có vẻ đúng [5].
+Điểm mới nên là metric thời gian. Có thể chuyển ý tưởng RAS/RAR/TMR sang pháp luật Việt Nam để đo **nguồn trích dẫn có còn hiệu lực tại thời điểm hỏi hay không**, tách biệt với chuyện answer text nghe có vẻ đúng [5].
 
 ## Thiết Kế Hệ Thống Và Kế Hoạch Thực Nghiệm
 
