@@ -36,6 +36,7 @@ export const ChatPage: React.FC = () => {
         { id: '1', title: 'So sánh luật đất đai năm 2024 và năm 2021', time: '10 phút trước', tag: 'Đất đai', isPinned: true },
         { id: '2', title: 'Điều kiện hưởng trợ cấp thôi việc theo Bộ luật Lao động', time: 'Hôm qua', tag: 'Lao động', isPinned: true },
         { id: '3', title: 'Nghị định 13/2023 về bảo vệ dữ liệu cá nhân PDP', time: '3 ngày trước', tag: 'Doanh nghiệp', isPinned: false },
+        { id: '4', title: 'Đánh thuốc mê bạn làm chung KLTN có phạm tội không?', time: '2 ngày trước', tag: 'Thuốc mê', isPinned: true },
     ]);
 
     const pinnedChats = chats.filter(c => c.isPinned);
@@ -262,12 +263,12 @@ export const ChatPage: React.FC = () => {
                     {/* Danh sách ghim (chỉ hiện khi có đoạn chat được ghim) */}
                     {pinnedChats.length > 0 && (
                         <div>
-                            <div className="flex items-center justify-between px-3 mb-2 text-sm font-semibold text-gray-900 tracking-wider">
+                            <div className="flex items-center justify-between px-3 mb-2 text-sm font-semibold text-gray-900/50 tracking-wider">
                                 <span
                                     className={`transition-opacity duration-200 whitespace-nowrap ${isSidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
                                         }`}
                                 >
-                                    Lịch sử được ghim
+                                    Chat được ghim
                                 </span>
                             </div>
 
@@ -305,12 +306,12 @@ export const ChatPage: React.FC = () => {
                     )}
 
                     <div>
-                        <div className="flex items-center justify-between px-3 mb-2 text-sm font-semibold text-slate-900 tracking-wider">
+                        <div className="flex items-center justify-between px-3 mb-2 text-sm font-semibold text-slate-900/50 tracking-wider">
                             <span
                                 className={`transition-opacity duration-200 whitespace-nowrap ${isSidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
                                     }`}
                             >
-                                Lịch sử tra cứu
+                                Lịch sử chat
                             </span>
                         </div>
 
