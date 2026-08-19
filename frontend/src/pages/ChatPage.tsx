@@ -84,7 +84,7 @@ export const ChatPage: React.FC = () => {
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                                 placeholder="Tìm kiếm đoạn chat, điều luật, văn bản quy phạm..."
-                                className="w-full text-base text-slate-800 placeholder-slate-400 bg-transparent focus:outline-none font-medium"
+                                className="w-full text-base text-slate-800 bg-transparent focus:outline-none font-medium"
                             />
                             <div className="flex items-center gap-1.5 shrink-0">
                                 <Button
@@ -188,7 +188,7 @@ export const ChatPage: React.FC = () => {
                         <div className="flex flex-col items-center gap-2">
                             <button
                                 onClick={() => setIsSidebarOpen(true)}
-                                className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-600 to-blue-600 flex items-center justify-center shadow-md shadow-indigo-600/25 text-white font-bold text-base cursor-pointer"
+                                className="w-9 h-9 rounded-xl bg-linear-to-br from-indigo-600 to-blue-600 flex items-center justify-center shadow-md shadow-indigo-600/25 text-white font-bold text-base cursor-pointer"
                                 title="Nhấn để mở rộng Sidebar"
                             >
                                 E
@@ -314,7 +314,7 @@ export const ChatPage: React.FC = () => {
                                                     {item.time}
                                                 </span>
                                             </div>
-
+                                            
                                             <button
                                                 type="button"
                                                 onClick={(e) => togglePin(item.id, e)}
@@ -429,7 +429,7 @@ export const ChatPage: React.FC = () => {
                             onChange={(e) => setInputPrompt(e.target.value)}
                             rows={1}
                             placeholder="Mô tả câu hỏi hoặc yêu cầu tra cứu pháp luật theo thời điểm..."
-                            className="w-full bg-transparent text-slate-900 placeholder-slate-400 text-sm sm:text-base px-1.5 py-1 focus:outline-none resize-none font-sans min-h-[40px] max-h-56 overflow-y-auto"
+                            className="w-full bg-transparent text-slate-900 text-sm sm:text-base px-1.5 py-1 focus:outline-none resize-none font-sans min-h-[40px] max-h-56 overflow-y-auto"
                         />
 
                         {/* Bottom Actions Bar - Nằm tự nhiên ở hàng dưới flexbox */}

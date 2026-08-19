@@ -10,10 +10,10 @@ export const LandingPage: React.FC = () => {
       {/* Background Decorative Lighting */}
       <div className="absolute inset-0 bg-grid-pattern opacity-60 pointer-events-none" />
 
-      {/* Ambient Gradient Orbs */}
-      <div className="absolute top-[-10%] left-1/2 -translate-x-1/2 w-[700px] h-[450px] bg-gradient-to-tr from-indigo-600/20 via-blue-500/15 to-violet-600/10 rounded-full blur-[140px] pointer-events-none animate-pulse-glow" />
-      <div className="absolute bottom-[-10%] left-[10%] w-[500px] h-[350px] bg-gradient-to-tr from-cyan-600/10 to-indigo-600/10 rounded-full blur-[120px] pointer-events-none" />
-      <div className="absolute top-[40%] right-[-5%] w-[400px] h-[300px] bg-gradient-to-tl from-amber-500/10 to-transparent rounded-full blur-[100px] pointer-events-none" />
+      {/* Ambient linear Orbs */}
+      <div className="absolute top-[-10%] left-1/2 -translate-x-1/2 w-[700px] h-[450px] bg-linear-to-tr from-indigo-600/20 via-blue-500/15 to-violet-600/10 rounded-full blur-[140px] pointer-events-none animate-pulse-glow" />
+      <div className="absolute bottom-[-10%] left-[10%] w-[500px] h-[350px] bg-linear-to-tr from-cyan-600/10 to-indigo-600/10 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute top-[40%] right-[-5%] w-[400px] h-[300px] bg-linear-to-tl from-amber-500/10 to-transparent rounded-full blur-[100px] pointer-events-none" />
 
       {/* Top Navigation Bar */}
       <header className="relative z-20 w-full max-w-7xl mx-auto px-6 py-5 flex items-center justify-between">
@@ -40,9 +40,9 @@ export const LandingPage: React.FC = () => {
 
         {/* Big Impactful Title */}
         <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight max-w-5xl leading-[1.1]">
-          <span className="text-gradient-primary">Tra cứu pháp luật</span>{' '}
+          <span className="text-linear-primary">Tra cứu pháp luật</span>{' '}
           <br />
-          <span className="text-gradient-accent">Đúng Luật, Đúng Thời Điểm</span>
+          <span className="text-linear-accent">Đúng Luật, Đúng Thời Điểm</span>
         </h1>
 
         {/* Subtitle Description */}
