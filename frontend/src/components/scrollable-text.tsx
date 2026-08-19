@@ -66,8 +66,8 @@ export const ScrollableText: React.FC<ScrollableTextProps> = ({
     >
       <span
         ref={textRef}
-        className={`${
-          isHovered && overflowDistance > 0 ? 'inline-block whitespace-nowrap' : 'block truncate'
+        className={`whitespace-nowrap ${
+          isHovered && overflowDistance > 0 ? 'inline-block' : 'block truncate'
         } ${className}`}
         style={{
           transform:
