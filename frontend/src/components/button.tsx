@@ -49,7 +49,7 @@ export const Button: React.FC<ButtonProps> = ({
             className={`${baseClasses} ${variantClasses[variant]} ${sizeClasses[size]} ${className}`}
             {...props}
         >
-            {icon && <span className="flex-shrink-0 flex items-center justify-center">{icon}</span>}
+            {icon && <span className="shrink-0 flex items-center justify-center">{icon}</span>}
             {children}
         </button>
     );
