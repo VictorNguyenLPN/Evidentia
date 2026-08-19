@@ -14,8 +14,11 @@ import {
     Clock,
     ChevronRight,
     LibraryBig,
+    Pin,
+    PinOff,
 } from 'lucide-react';
 import Button from '../components/button';
+import ScrollableText from '../components/scrollable-text';
 
 export const ChatPage: React.FC = () => {
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -24,6 +27,21 @@ export const ChatPage: React.FC = () => {
     const [activeChatId, setActiveChatId] = useState<string | null>('1');
     const [inputPrompt, setInputPrompt] = useState('');
     const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+    const [chats, setChats] = useState([
+        { id: '1', title: 'So sánh luật đất đai năm 2024 và năm 2021', time: '10 phút trước', tag: 'Đất đai', isPinned: true },
+        { id: '2', title: 'Điều kiện hưởng trợ cấp thôi việc theo Bộ luật Lao động', time: 'Hôm qua', tag: 'Lao động', isPinned: true },
+        { id: '3', title: 'Nghị định 13/2023 về bảo vệ dữ liệu cá nhân PDP', time: '3 ngày trước', tag: 'Doanh nghiệp', isPinned: false },
+    ]);
+
+    const pinnedChats = chats.filter(c => c.isPinned);
+
+    const togglePin = (id: string, e?: React.MouseEvent) => {
+        e?.stopPropagation();
+        setChats(prev => prev.map(chat =>
+            chat.id === id ? { ...chat, isPinned: !chat.isPinned } : chat
+        ));
+    };
 
     useEffect(() => {
         if (textareaRef.current) {
@@ -45,17 +63,6 @@ export const ChatPage: React.FC = () => {
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [isSearchOpen]);
-
-    const recentSearches = [
-        { id: '1', title: 'So sánh luật đất đai năm 2024 và năm 2021', time: '10 phút trước', tag: 'Đất đai' },
-        { id: '2', title: 'Điều kiện hưởng trợ cấp thôi việc theo Bộ luật Lao động', time: 'Hôm qua', tag: 'Lao động' },
-        { id: '3', title: 'Nghị định 13/2023 về bảo vệ dữ liệu cá nhân PDP', time: '3 ngày trước', tag: 'Doanh nghiệp' },
-    ];
-
-    const pinnedSearches = [
-        { id: '1', title: 'So sánh luật đất đai năm 2024 và năm 2021', time: '10 phút trước', tag: 'Đất đai' },
-        { id: '2', title: 'Điều kiện hưởng trợ cấp thôi việc theo Bộ luật Lao động', time: 'Hôm qua', tag: 'Lao động' },
-    ];
 
     return (
         <div className="relative h-screen w-full bg-slate-50 text-slate-800 flex overflow-hidden font-sans">
@@ -99,7 +106,7 @@ export const ChatPage: React.FC = () => {
                             </div>
 
                             <div className="space-y-1">
-                                {recentSearches
+                                {chats
                                     .filter(item => item.title.toLowerCase().includes(searchQuery.toLowerCase()))
                                     .map((item) => (
                                         <Button
@@ -197,7 +204,7 @@ export const ChatPage: React.FC = () => {
                         </div>
                     )}
 
-                    <div className=''>
+                    <div className='space-y-1'>
                         {isSidebarOpen ? (
                             <Button
                                 variant="sidebar"
@@ -245,63 +252,80 @@ export const ChatPage: React.FC = () => {
                 {/* ================= MIDDLE: HISTORY LIST && PINNED================= */}
                 <div className="flex-1 p-2.5 pt-5 overflow-y-auto space-y-5">
                     {isSidebarOpen ? (
-                        <div>
-                            <div className="flex items-center justify-between px-3.5 mb-3 text-sm font-semibold text-gray-900 tracking-wider">
-                                <span>Lịch sử được ghim</span>
-                            </div>
+                        <div className="space-y-5">
+                            {/* Danh sách ghim (chỉ hiện khi có đoạn chat được ghim) */}
+                            {pinnedChats.length > 0 && (
+                                <div>
+                                    <div className="flex items-center justify-between px-3.5 mb-2 text-sm font-semibold text-gray-900 tracking-wider">
+                                        <span>Lịch sử được ghim</span>
+                                    </div>
 
-                            <div className="space-y-1">
-                                {pinnedSearches.map((item) => (
-                                    <Button
-                                        key={item.id}
-                                        variant="sidebar"
+                                    <div className="space-y-1">
+                                        {pinnedChats.map((item) => (
+                                            <Button
+                                                key={`pinned-${item.id}`}
+                                                variant="sidebar"
+                                                active={activeChatId === item.id}
+                                                onClick={() => setActiveChatId(item.id)}
+                                                className="group flex items-center justify-between px-3 py-2"
+                                            >
+                                                <div className="flex flex-col text-left flex-1 min-w-0 pr-1.5">
+                                                    <ScrollableText
+                                                        text={item.title}
+                                                        className="text-sm text-slate-900 font-normal"
+                                                    />
+                                                </div>
 
-                                    >
-                                        <div className="flex flex-col text-left w-full min-w-0">
-                                            <span className="text-sm text-slate-900 truncate">
-                                                {item.title}
-                                            </span>
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => togglePin(item.id, e)}
+                                                    className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-slate-700 rounded hover:bg-slate-300/50 shrink-0"
+                                                    title="Bỏ ghim"
+                                                >
+                                                    <PinOff className="w-3.5 h-3.5" />
+                                                </button>
+                                            </Button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
 
-                                        </div>
-                                    </Button>
-                                ))}
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="flex flex-col items-center gap-1.5 pt-1">
-                            <Button
-                                variant="icon"
-                                onClick={() => setIsSidebarOpen(true)}
-                                title="Lịch sử tra cứu"
-                            >
-                                <History className="w-4 h-4" />
-                            </Button>
-                        </div>
-                    )}
-                    {isSidebarOpen ? (
-                        <div>
-                            <div className="flex items-center justify-between px-3.5 mb-3 text-sm font-semibold text-slate-900 tracking-wider">
-                                <span>Lịch sử tra cứu</span>
-                            </div>
 
-                            <div className="space-y-1">
-                                {recentSearches.map((item) => (
-                                    <Button
-                                        key={item.id}
-                                        variant="sidebar"
-                                        active={activeChatId === item.id}
-                                        onClick={() => setActiveChatId(item.id)}
-                                    >
-                                        <div className="flex flex-col text-left w-full min-w-0">
-                                            <span className="text-sm text-slate-900 truncate">
-                                                {item.title}
-                                            </span>
-                                            <span className="text-xs text-slate-400 mt-0.5">
-                                                {item.time}
-                                            </span>
-                                        </div>
-                                    </Button>
-                                ))}
+                            <div>
+                                <div className="flex items-center justify-between px-3.5 mb-2 text-sm font-semibold text-slate-900 tracking-wider">
+                                    <span>Lịch sử tra cứu</span>
+                                </div>
+
+                                <div className="space-y-1">
+                                    {chats.filter(c => !c.isPinned).map((item) => (
+                                        <Button
+                                            key={item.id}
+                                            variant="sidebar"
+                                            active={activeChatId === item.id}
+                                            onClick={() => setActiveChatId(item.id)}
+                                            className="group flex items-center justify-between px-3 py-2"
+                                        >
+                                            <div className="flex flex-col text-left flex-1 min-w-0 pr-1.5">
+                                                <ScrollableText
+                                                    text={item.title}
+                                                    className="text-sm text-slate-900 font-normal"
+                                                />
+                                                <span className="text-xs text-slate-400 mt-0.5">
+                                                    {item.time}
+                                                </span>
+                                            </div>
+
+                                            <button
+                                                type="button"
+                                                onClick={(e) => togglePin(item.id, e)}
+                                                className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-300/50 rounded shrink-0"
+                                                title="Ghim đoạn chat"
+                                            >
+                                                <Pin className="w-3.5 h-3.5" />
+                                            </button>
+                                        </Button>
+                                    ))}
+                                </div>
                             </div>
                         </div>
                     ) : (
@@ -353,7 +377,7 @@ export const ChatPage: React.FC = () => {
                         <div className="flex items-center gap-2.5">
                             <h1 className="text-base sm:text-lg font-bold text-slate-900">
                                 {activeChatId
-                                    ? recentSearches.find(c => c.id === activeChatId)?.title || 'Phiên làm việc'
+                                    ? chats.find(c => c.id === activeChatId)?.title || 'Phiên làm việc'
                                     : 'Phiên tra cứu mới'}
                             </h1>
                         </div>
@@ -444,7 +468,7 @@ export const ChatPage: React.FC = () => {
 
                     {/* Footer Disclaimer Note */}
                     <p className="mt-8 text-center text-xs text-slate-500">
-                        Evidentia có thể trả lời sai. Vui lòng kiểm tra các thông tin quan trọng
+                        Evidentia có thể trả lời chưa chính xác. Vui lòng kiểm tra các thông tin quan trọng
                     </p>
                 </div>
             </main>
