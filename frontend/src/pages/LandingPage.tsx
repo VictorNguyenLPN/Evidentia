@@ -2,6 +2,7 @@ import React, { } from 'react';
 import {
   ArrowRight,
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 export const LandingPage: React.FC = () => {
   return (
@@ -24,13 +25,13 @@ export const LandingPage: React.FC = () => {
 
         {/*Actions */}
         <div className="flex items-center gap-4">
-          <a
-            href="#explore"
+          <Link
+            to="/chats"
             className="flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md shadow-indigo-600/30 transition-all hover:scale-[1.02] active:scale-[0.98]"
           >
             <span>Trải nghiệm ngay</span>
             <ArrowRight className="w-3.5 h-3.5" />
-          </a>
+          </Link>
         </div>
       </header>
 
