@@ -8,6 +8,7 @@ function App() {
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/chats" element={<ChatPage />} />
+        <Route path="/chats/:chatId" element={<ChatPage />} />
         {/* Fallback route */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
