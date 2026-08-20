@@ -45,21 +45,24 @@
   border: 1px solid rgba(255, 255, 255, 0.07);
 }
 
-.text-gradient-primary {
+.text-gradient-primary,
+.text-linear-primary {
   background: linear-gradient(135deg, #ffffff 20%, #cbd5e1 50%, #818cf8 100%);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
-.text-gradient-accent {
+.text-gradient-accent,
+.text-linear-accent {
   background: linear-gradient(135deg, #a5b4fc 0%, #6366f1 50%, #38bdf8 100%);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
-.text-gradient-gold {
+.text-gradient-gold,
+.text-linear-gold {
   background: linear-gradient(135deg, #fef08a 0%, #eab308 50%, #ca8a04 100%);
   -webkit-background-clip: text;
   background-clip: text;

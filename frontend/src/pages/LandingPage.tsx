@@ -40,9 +40,9 @@ export const LandingPage: React.FC = () => {
 
         {/* Big Impactful Title */}
         <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight max-w-5xl leading-[1.1]">
-          <span className="text-linear-primary">Tra cứu pháp luật</span>{' '}
+          <span className="text-gradient-primary">Tra cứu pháp luật</span>{' '}
           <br />
-          <span className="text-linear-accent">Đúng Luật, Đúng Thời Điểm</span>
+          <span className="text-gradient-accent">Đúng Luật, Đúng Thời Điểm</span>
         </h1>
 
         {/* Subtitle Description */}

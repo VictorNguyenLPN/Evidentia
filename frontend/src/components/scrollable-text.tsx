@@ -35,7 +35,8 @@ export const ScrollableText: React.FC<ScrollableTextProps> = ({
     const container = containerRef.current;
     if (!container) return;
 
-    const parentButton = container.closest('button') || container;
+    // Find the enclosing chat item row (.group, button, or container)
+    const hoverTarget = container.closest('.group') || container.closest('button') || container;
 
     const onEnter = () => {
       checkOverflow();
@@ -46,12 +47,12 @@ export const ScrollableText: React.FC<ScrollableTextProps> = ({
       setInternalIsHovered(false);
     };
 
-    parentButton.addEventListener('mouseenter', onEnter);
-    parentButton.addEventListener('mouseleave', onLeave);
+    hoverTarget.addEventListener('mouseenter', onEnter);
+    hoverTarget.addEventListener('mouseleave', onLeave);
 
     return () => {
-      parentButton.removeEventListener('mouseenter', onEnter);
-      parentButton.removeEventListener('mouseleave', onLeave);
+      hoverTarget.removeEventListener('mouseenter', onEnter);
+      hoverTarget.removeEventListener('mouseleave', onLeave);
     };
   }, [text]);
 
