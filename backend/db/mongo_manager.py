@@ -3,7 +3,7 @@ import hashlib
 import logging
 import uuid
 from datetime import datetime
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Tuple
 
 # pyrefly: ignore [missing-import]
 import certifi
@@ -38,6 +38,8 @@ class MongoManager:
         self._client: Optional[MongoClient] = None
         self._connected: Optional[bool] = None
         self._fallback_chats: Dict[str, Dict[str, Any]] = {}
+        self._fallback_laws: Dict[str, Dict[str, Any]] = {}
+        self._fallback_articles: Dict[str, List[Dict[str, Any]]] = {}
 
     def get_client(self) -> Optional[MongoClient]:
         if self._client is None and self.uri and self._connected is not False:
@@ -96,6 +98,18 @@ class MongoManager:
         client = self.get_client()
         if client is not None:
             return client[self.db_name]["chats"]
+        return None
+
+    def get_laws_collection(self) -> Optional[Collection]:
+        client = self.get_client()
+        if client is not None:
+            return client[self.db_name]["laws"]
+        return None
+
+    def get_articles_collection(self) -> Optional[Collection]:
+        client = self.get_client()
+        if client is not None:
+            return client[self.db_name]["law_articles"]
         return None
 
     @staticmethod
@@ -372,6 +386,493 @@ class MongoManager:
 
         return found
 
+    def _structure_law_data(self, chunks: List[Dict[str, Any]]) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+        """
+        Transform raw chunk list into structured Law Documents and Articles.
+        """
+        docs_map: Dict[str, Dict[str, Any]] = {}
+        articles_map: Dict[Tuple[str, int], Dict[str, Any]] = {}
+
+        for item in chunks:
+            meta = item.get("metadata", {})
+            doc_id = meta.get("document_id")
+            if not doc_id:
+                continue
+
+            if doc_id not in docs_map:
+                docs_map[doc_id] = {
+                    "document_id": doc_id,
+                    "document_title": meta.get("document_title", "Văn bản luật"),
+                    "doc_identity": meta.get("doc_identity", ""),
+                    "document_type": meta.get("document_type", "Bộ luật"),
+                    "issue_date": meta.get("issue_date"),
+                    "effect_date": meta.get("effect_date"),
+                    "effect_status_name": meta.get("effect_status_name", "Đang có hiệu lực"),
+                    "expire_date": meta.get("expire_date"),
+                    "organ_names": meta.get("organ_names") or [],
+                    "signer_title_names": meta.get("signer_title_names") or [],
+                    "signer_names": meta.get("signer_names") or [],
+                    "vbpl_url": meta.get("vbpl_url", ""),
+                    "field_names": meta.get("field_names") or [],
+                    "chapters_dict": {},
+                    "stats": {
+                        "total_articles": 0,
+                        "total_chapters": 0,
+                        "total_clauses": 0,
+                        "total_points": 0,
+                        "total_chunks": 0
+                    }
+                }
+
+            docs_map[doc_id]["stats"]["total_chunks"] += 1
+            nt = item.get("node_type")
+            if nt == "clause":
+                docs_map[doc_id]["stats"]["total_clauses"] += 1
+            elif nt == "point":
+                docs_map[doc_id]["stats"]["total_points"] += 1
+
+            ch_num = str(meta.get("chapter_number") or "Khác")
+            ch_title = meta.get("chapter_title") or "Chương không có tiêu đề"
+            art_num = meta.get("article_number")
+            art_title = meta.get("article_title") or (f"Điều {art_num}" if art_num is not None else "Điều")
+
+            if ch_num not in docs_map[doc_id]["chapters_dict"]:
+                docs_map[doc_id]["chapters_dict"][ch_num] = {
+                    "chapter_number": ch_num,
+                    "chapter_title": ch_title,
+                    "articles": []
+                }
+
+            if art_num is not None:
+                art_key = (doc_id, int(art_num))
+                if art_key not in articles_map:
+                    articles_map[art_key] = {
+                        "document_id": doc_id,
+                        "document_title": meta.get("document_title", ""),
+                        "chapter_number": ch_num,
+                        "chapter_title": ch_title,
+                        "article_number": int(art_num),
+                        "article_title": art_title,
+                        "lead_in_text": meta.get("lead_in_text"),
+                        "hierarchy_path": meta.get("hierarchy_path", []),
+                        "article_text": item.get("text") if nt == "article" else None,
+                        "clauses_dict": {},
+                        "amendment_notes": list(item.get("amendment_notes") or [])
+                    }
+                    docs_map[doc_id]["chapters_dict"][ch_num]["articles"].append({
+                        "article_number": int(art_num),
+                        "article_title": art_title
+                    })
+                    docs_map[doc_id]["stats"]["total_articles"] += 1
+
+                cl_num = meta.get("clause_number")
+                pt = meta.get("point")
+
+                if nt == "article":
+                    articles_map[art_key]["article_text"] = item.get("text")
+                    if item.get("amendment_notes"):
+                        articles_map[art_key]["amendment_notes"].extend(item.get("amendment_notes"))
+                elif nt == "clause" and cl_num is not None:
+                    cl_k = int(cl_num) if isinstance(cl_num, int) or (isinstance(cl_num, str) and cl_num.isdigit()) else cl_num
+                    if cl_k not in articles_map[art_key]["clauses_dict"]:
+                        articles_map[art_key]["clauses_dict"][cl_k] = {
+                            "clause_number": cl_k,
+                            "clause_title": meta.get("clause_title"),
+                            "lead_in_text": meta.get("lead_in_text"),
+                            "text": item.get("text") or "",
+                            "points": [],
+                            "amendment_notes": list(item.get("amendment_notes") or [])
+                        }
+                    else:
+                        if item.get("text"):
+                            articles_map[art_key]["clauses_dict"][cl_k]["text"] = item.get("text")
+                        if item.get("amendment_notes"):
+                            articles_map[art_key]["clauses_dict"][cl_k]["amendment_notes"].extend(item.get("amendment_notes"))
+                elif nt == "point":
+                    if cl_num is not None:
+                        cl_k = int(cl_num) if isinstance(cl_num, int) or (isinstance(cl_num, str) and cl_num.isdigit()) else cl_num
+                        if cl_k not in articles_map[art_key]["clauses_dict"]:
+                            articles_map[art_key]["clauses_dict"][cl_k] = {
+                                "clause_number": cl_k,
+                                "clause_title": meta.get("clause_title"),
+                                "lead_in_text": meta.get("lead_in_text"),
+                                "text": "",
+                                "points": [],
+                                "amendment_notes": []
+                            }
+                        articles_map[art_key]["clauses_dict"][cl_k]["points"].append({
+                            "point": pt,
+                            "text": item.get("text"),
+                            "amendment_notes": list(item.get("amendment_notes") or [])
+                        })
+
+        # Finalize Law Documents
+        final_docs = []
+        for doc_id, d in docs_map.items():
+            d["stats"]["total_chapters"] = len(d["chapters_dict"])
+            chapters_list = []
+            for ch_num, ch_data in d["chapters_dict"].items():
+                arts = ch_data["articles"]
+                range_str = ""
+                if arts:
+                    range_str = f"Điều {arts[0]['article_number']} - Điều {arts[-1]['article_number']}"
+                chapters_list.append({
+                    "chapter_number": ch_num,
+                    "chapter_title": ch_data["chapter_title"],
+                    "article_count": len(arts),
+                    "article_range": range_str,
+                    "articles": arts
+                })
+            d["chapters"] = chapters_list
+            del d["chapters_dict"]
+            final_docs.append(d)
+
+        # Finalize Articles
+        final_articles = []
+        for art in articles_map.values():
+            clauses = []
+            for cl_k in sorted(art["clauses_dict"].keys(), key=lambda x: (isinstance(x, str), x)):
+                cl_data = art["clauses_dict"][cl_k]
+                clauses.append(cl_data)
+
+            # Build readable rendered text representation
+            lines = [f"Điều {art['article_number']}. {art['article_title']}"]
+            if art.get("article_text"):
+                lines.append(art["article_text"])
+            for cl in clauses:
+                cl_num_str = f"{cl['clause_number']}. " if cl.get("clause_number") is not None else ""
+                cl_body = cl.get("text") or cl.get("lead_in_text") or ""
+                if cl_body:
+                    lines.append(f"{cl_num_str}{cl_body}")
+                for p in cl.get("points", []):
+                    lines.append(f"   {p.get('point')}) {p.get('text')}")
+
+            art_final = {
+                "document_id": art["document_id"],
+                "document_title": art["document_title"],
+                "chapter_number": art["chapter_number"],
+                "chapter_title": art["chapter_title"],
+                "article_number": art["article_number"],
+                "article_title": art["article_title"],
+                "hierarchy_path": art["hierarchy_path"],
+                "article_text": art["article_text"],
+                "clauses": clauses,
+                "amendment_notes": list(set(art["amendment_notes"])),
+                "full_rendered_text": "\n".join(lines)
+            }
+            final_articles.append(art_final)
+
+        # Sort articles by document_id and article_number
+        final_articles.sort(key=lambda a: (a["document_id"], a["article_number"]))
+        return final_docs, final_articles
+
+    def sync_laws_on_startup(self, data_path: Any) -> Dict[str, Any]:
+        """
+        Synchronize law metadata, statistics, and structured articles into MongoDB on startup.
+        If MongoDB is unconfigured or offline, retains in-memory fallback.
+        """
+        import json
+        from pathlib import Path
+        
+        path_obj = Path(data_path) if isinstance(data_path, (str, Path)) else None
+        if not path_obj or not path_obj.exists():
+            logger.warning(f"Data file not found at {data_path}. Law sync skipped.")
+            return {"status": "file_not_found", "message": f"Data file not found at {data_path}"}
+
+        try:
+            with open(path_obj, "r", encoding="utf-8") as f:
+                chunks = json.load(f)
+
+            if not isinstance(chunks, list):
+                return {"status": "invalid_data", "message": "Expected JSON list of chunks"}
+
+            docs, articles = self._structure_law_data(chunks)
+
+            # Store in fallback
+            for d in docs:
+                self._fallback_laws[d["document_id"]] = d
+            for a in articles:
+                doc_id = a["document_id"]
+                if doc_id not in self._fallback_articles:
+                    self._fallback_articles[doc_id] = []
+                self._fallback_articles[doc_id].append(a)
+
+            laws_col = self.get_laws_collection()
+            articles_col = self.get_articles_collection()
+
+            if laws_col is not None and articles_col is not None:
+                # Check existing records & count verification
+                existing_laws_count = laws_col.count_documents({})
+                existing_articles_count = articles_col.count_documents({})
+                local_laws_count = len(docs)
+                local_articles_count = len(articles)
+
+                # Create indexes if needed
+                try:
+                    laws_col.create_index("document_id", unique=True)
+                    articles_col.create_index([("document_id", pymongo.ASCENDING), ("article_number", pymongo.ASCENDING)], unique=True)
+                    articles_col.create_index([("document_id", pymongo.ASCENDING), ("chapter_number", pymongo.ASCENDING)])
+                except Exception as idx_err:
+                    logger.warning(f"Index creation note: {idx_err}")
+
+                # 1. If MongoDB is empty: log warning and skip auto-update
+                if existing_laws_count == 0 or existing_articles_count == 0:
+                    msg = (
+                        f"MongoDB collection 'laws' is empty (MongoDB: {existing_laws_count} laws, {existing_articles_count} articles "
+                        f"vs Local: {local_laws_count} laws, {local_articles_count} articles). Auto-sync skipped."
+                    )
+                    logger.warning(msg)
+                    return {
+                        "status": "empty_warning",
+                        "local_laws_count": local_laws_count,
+                        "local_articles_count": local_articles_count,
+                        "mongodb_laws_count": existing_laws_count,
+                        "mongodb_articles_count": existing_articles_count,
+                        "message": msg
+                    }
+
+                # 2. If count mismatch: log warning and skip auto-update
+                if existing_articles_count != local_articles_count or existing_laws_count != local_laws_count:
+                    msg = (
+                        f"Count mismatch detected in MongoDB: MongoDB ({existing_laws_count} laws, {existing_articles_count} articles) "
+                        f"vs Local ({local_laws_count} laws, {local_articles_count} articles). Auto-sync skipped."
+                    )
+                    logger.warning(msg)
+                    return {
+                        "status": "count_mismatch",
+                        "local_laws_count": local_laws_count,
+                        "local_articles_count": local_articles_count,
+                        "mongodb_laws_count": existing_laws_count,
+                        "mongodb_articles_count": existing_articles_count,
+                        "message": msg
+                    }
+
+                # 3. Exactly in sync
+                logger.info(
+                    f"MongoDB is in sync with local dataset ({existing_laws_count} law(s), {existing_articles_count} articles)."
+                )
+                return {
+                    "status": "in_sync",
+                    "laws_count": existing_laws_count,
+                    "articles_count": existing_articles_count,
+                    "message": f"MongoDB laws collection is in sync ({existing_laws_count} law(s), {existing_articles_count} articles)."
+                }
+
+            logger.info(f"Operated laws in in-memory fallback ({len(docs)} law(s), {len(articles)} articles).")
+            return {
+                "status": "fallback_ready",
+                "laws_count": len(docs),
+                "articles_count": len(articles),
+                "message": "Operated in in-memory fallback mode."
+            }
+
+        except Exception as e:
+            logger.error(f"Error during laws startup sync: {e}", exc_info=True)
+            return {"status": "error", "error": str(e)}
+
+    def ingest_laws(self, data_path: Any) -> Dict[str, Any]:
+        """
+        Explicitly ingest/update law documents and structured articles to MongoDB.
+        Only executed on manual command/request, NOT automatically on startup.
+        """
+        import json
+        from pathlib import Path
+
+        path_obj = Path(data_path) if isinstance(data_path, (str, Path)) else None
+        if not path_obj or not path_obj.exists():
+            return {"status": "file_not_found", "message": f"Data file not found at {data_path}"}
+
+        try:
+            with open(path_obj, "r", encoding="utf-8") as f:
+                chunks = json.load(f)
+
+            docs, articles = self._structure_law_data(chunks)
+            laws_col = self.get_laws_collection()
+            articles_col = self.get_articles_collection()
+
+            if laws_col is None or articles_col is None:
+                return {"status": "error", "message": "MongoDB is not connected."}
+
+            logger.info(f"Explicitly uploading {len(docs)} law(s) and {len(articles)} articles to MongoDB...")
+            for d in docs:
+                laws_col.replace_one({"document_id": d["document_id"]}, d, upsert=True)
+            for a in articles:
+                articles_col.replace_one(
+                    {"document_id": a["document_id"], "article_number": a["article_number"]},
+                    a,
+                    upsert=True
+                )
+
+            final_laws = laws_col.count_documents({})
+            final_arts = articles_col.count_documents({})
+            logger.info(f"Ingestion complete! Total in MongoDB: {final_laws} laws, {final_arts} articles.")
+            return {
+                "status": "success",
+                "laws_count": final_laws,
+                "articles_count": final_arts,
+                "message": f"Successfully ingested {final_laws} laws and {final_arts} articles to MongoDB."
+            }
+        except Exception as e:
+            logger.error(f"Error during explicit law ingestion: {e}", exc_info=True)
+            return {"status": "error", "error": str(e)}
+
+    def get_all_laws(self) -> Dict[str, Any]:
+        """
+        Retrieve all law documents with overall statistics.
+        """
+        laws_col = self.get_laws_collection()
+        laws_list = []
+
+        if laws_col is not None:
+            try:
+                cursor = laws_col.find({}, {"_id": 0})
+                laws_list = list(cursor)
+            except Exception as e:
+                logger.error(f"Error fetching laws from MongoDB: {e}")
+
+        if not laws_list:
+            laws_list = list(self._fallback_laws.values())
+
+        total_articles = sum(l.get("stats", {}).get("total_articles", 0) for l in laws_list)
+        total_chapters = sum(l.get("stats", {}).get("total_chapters", 0) for l in laws_list)
+        total_chunks = sum(l.get("stats", {}).get("total_chunks", 0) for l in laws_list)
+
+        return {
+            "total_laws": len(laws_list),
+            "total_articles": total_articles,
+            "total_chapters": total_chapters,
+            "total_chunks": total_chunks,
+            "laws": laws_list
+        }
+
+    def get_law_detail(self, document_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Retrieve single law document metadata and chapter table of contents.
+        """
+        laws_col = self.get_laws_collection()
+        if laws_col is not None:
+            try:
+                doc = laws_col.find_one({"document_id": document_id}, {"_id": 0})
+                if doc:
+                    return doc
+            except Exception as e:
+                logger.error(f"Error fetching law {document_id} from MongoDB: {e}")
+
+        return self._fallback_laws.get(document_id)
+
+    def get_law_articles(
+        self,
+        document_id: str,
+        chapter_number: Optional[str] = None,
+        search: Optional[str] = None,
+        page: int = 1,
+        limit: int = 20
+    ) -> Dict[str, Any]:
+        """
+        Retrieve paginated articles for a law document, with support for chapter filtering and keyword search.
+        Used for infinite scroll / lazy loading.
+        """
+        page = max(1, page)
+        limit = max(1, min(100, limit))
+        skip = (page - 1) * limit
+
+        articles_col = self.get_articles_collection()
+        if articles_col is not None:
+            try:
+                query: Dict[str, Any] = {"document_id": document_id}
+                if chapter_number:
+                    query["chapter_number"] = str(chapter_number)
+
+                if search and search.strip():
+                    term = search.strip()
+                    # Check if search is a specific article number
+                    if term.isdigit():
+                        query["$or"] = [
+                            {"article_number": int(term)},
+                            {"article_title": {"$regex": term, "$options": "i"}},
+                            {"full_rendered_text": {"$regex": term, "$options": "i"}}
+                        ]
+                    else:
+                        query["$or"] = [
+                            {"article_title": {"$regex": term, "$options": "i"}},
+                            {"full_rendered_text": {"$regex": term, "$options": "i"}}
+                        ]
+
+                total = articles_col.count_documents(query)
+                cursor = (
+                    articles_col.find(query, {"_id": 0})
+                    .sort("article_number", pymongo.ASCENDING)
+                    .skip(skip)
+                    .limit(limit)
+                )
+                articles = list(cursor)
+                return {
+                    "document_id": document_id,
+                    "page": page,
+                    "limit": limit,
+                    "total": total,
+                    "has_more": (skip + len(articles)) < total,
+                    "articles": articles
+                }
+            except Exception as e:
+                logger.error(f"Error querying articles from MongoDB: {e}")
+
+        # Fallback in-memory search & pagination
+        all_arts = self._fallback_articles.get(document_id, [])
+        filtered = all_arts
+        if chapter_number:
+            filtered = [a for a in filtered if str(a.get("chapter_number")) == str(chapter_number)]
+
+        if search and search.strip():
+            s_lower = search.strip().lower()
+            if s_lower.isdigit():
+                art_val = int(s_lower)
+                filtered = [
+                    a for a in filtered
+                    if a.get("article_number") == art_val
+                    or s_lower in (a.get("article_title") or "").lower()
+                    or s_lower in (a.get("full_rendered_text") or "").lower()
+                ]
+            else:
+                filtered = [
+                    a for a in filtered
+                    if s_lower in (a.get("article_title") or "").lower()
+                    or s_lower in (a.get("full_rendered_text") or "").lower()
+                ]
+
+        total = len(filtered)
+        paged = filtered[skip : skip + limit]
+        return {
+            "document_id": document_id,
+            "page": page,
+            "limit": limit,
+            "total": total,
+            "has_more": (skip + len(paged)) < total,
+            "articles": paged
+        }
+
+    def get_law_article(self, document_id: str, article_number: int) -> Optional[Dict[str, Any]]:
+        """
+        Retrieve a single specific article by document_id and article_number.
+        """
+        articles_col = self.get_articles_collection()
+        if articles_col is not None:
+            try:
+                doc = articles_col.find_one(
+                    {"document_id": document_id, "article_number": int(article_number)},
+                    {"_id": 0}
+                )
+                if doc:
+                    return doc
+            except Exception as e:
+                logger.error(f"Error fetching article {article_number} for {document_id}: {e}")
+
+        for a in self._fallback_articles.get(document_id, []):
+            if a.get("article_number") == int(article_number):
+                return a
+        return None
+
 # Singleton instance
 mongo_manager = MongoManager()
+
 

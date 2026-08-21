@@ -106,7 +106,8 @@ logger = logging.getLogger("evidentia.backend")
 async def lifespan(app: FastAPI):
     """
     FastAPI Lifespan handler.
-    Checks Gemini LLM readiness, Qdrant Cloud collection/sync, and MongoDB connectivity on startup.
+    Strictly performs connection, status, and count checks on startup (Warning only, no auto-ingest).
+    Data ingestion is only executed via explicit CLI flags (--ingest-qdrant, --sync-mongo).
     """
     print("")
     logger.info(f"Local Data File: {DATA_PATH}")
@@ -114,14 +115,18 @@ async def lifespan(app: FastAPI):
     # 1. Verify Gemini LLM readiness
     gemini_client.check_readiness()
 
-    # 2. Check & auto-sync local dataset to Qdrant Cloud if needed
+    # 2. Check Qdrant Cloud collection status (verification only)
     try:
         qdrant_manager.sync_data_on_startup(data_path=DATA_PATH)
     except Exception as e:
-        logger.error(f"Failed to auto-sync with Qdrant Cloud on startup: {e}", exc_info=True)
+        logger.error(f"Failed to check Qdrant Cloud status on startup: {e}", exc_info=True)
 
-    # 3. Verify MongoDB connection
+    # 3. Check MongoDB connection & laws status (verification only)
     mongo_manager.check_connection()
+    try:
+        mongo_manager.sync_laws_on_startup(data_path=DATA_PATH)
+    except Exception as e:
+        logger.error(f"Failed to check MongoDB laws status on startup: {e}", exc_info=True)
     
     print("")
     yield
@@ -261,6 +266,59 @@ def rename_chat_session(chat_id: str, payload: RenameChatRequest):
             detail="Chat not found or rename failed."
         )
     return {"success": True, "id": chat_id, "title": payload.title.strip()}
+    
+@app.get("/api/laws")
+def get_laws_overview():
+    """
+    Retrieve list of all legal documents with overall statistics.
+    """
+    return mongo_manager.get_all_laws()
+
+@app.get("/api/laws/{document_id}")
+def get_law_metadata_and_toc(document_id: str):
+    """
+    Retrieve specific law document metadata and chapter table of contents.
+    """
+    law = mongo_manager.get_law_detail(document_id)
+    if not law:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Law document '{document_id}' not found."
+        )
+    return law
+
+@app.get("/api/laws/{document_id}/articles")
+def get_law_articles(
+    document_id: str,
+    chapter_number: Optional[str] = None,
+    search: Optional[str] = None,
+    page: int = 1,
+    limit: int = 20
+):
+    """
+    Retrieve paginated list of articles for infinite scroll / lazy loading.
+    """
+    return mongo_manager.get_law_articles(
+        document_id=document_id,
+        chapter_number=chapter_number,
+        search=search,
+        page=page,
+        limit=limit
+    )
+
+@app.get("/api/laws/{document_id}/articles/{article_number}")
+def get_law_article(document_id: str, article_number: int):
+    """
+    Retrieve single article details.
+    """
+    art = mongo_manager.get_law_article(document_id, article_number)
+    if not art:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Article {article_number} in document '{document_id}' not found."
+        )
+    return art
+
 
 @app.post("/api/chat", response_model=ChatResponse)
 def chat_endpoint(payload: ChatRequest):
@@ -307,6 +365,58 @@ def chat_endpoint(payload: ChatRequest):
         )
 
 if __name__ == "__main__":
+    import argparse
+    from pathlib import Path
     # pyrefly: ignore [missing-import]
     import uvicorn
-    uvicorn.run("backend.main:app", host=HOST, port=PORT, reload=True, log_config=UVICORN_LOGGING_CONFIG)
+
+    parser = argparse.ArgumentParser(description="Evidentia Legal Agentic-RAG API Service")
+    parser.add_argument("--host", type=str, default=HOST, help=f"Host interface to bind (default: {HOST})")
+    parser.add_argument("--port", type=int, default=PORT, help=f"Port to bind (default: {PORT})")
+    parser.add_argument("--reload", action="store_true", default=True, help="Enable auto-reload on code changes")
+    parser.add_argument("--no-reload", dest="reload", action="store_false", help="Disable auto-reload")
+    parser.add_argument(
+        "--ingest-qdrant",
+        action="store_true",
+        help="Explicitly encode and ingest local dataset chunks into Qdrant Cloud"
+    )
+    parser.add_argument(
+        "--sync-mongo", "--ingest-mongo",
+        action="store_true",
+        dest="sync_mongo",
+        help="Explicitly parse and ingest/update law metadata and structured articles into MongoDB"
+    )
+    parser.add_argument(
+        "--data-path",
+        type=str,
+        default=str(DATA_PATH),
+        help=f"Path to raw data JSON file (default: {DATA_PATH})"
+    )
+
+    args, unknown = parser.parse_known_args()
+
+    data_file = Path(args.data_path) if args.data_path else DATA_PATH
+
+    # 1. Handle explicit Qdrant ingestion flag
+    if args.ingest_qdrant:
+        logger.info(f"CLI Trigger: Ingesting dataset into Qdrant Cloud from {data_file}...")
+        try:
+            res_q = qdrant_manager.ingest_dataset(data_path=data_file)
+            logger.info(f"Qdrant Ingestion Finished: {res_q.get('message')}")
+        except Exception as e:
+            logger.error(f"Failed to ingest to Qdrant Cloud: {e}", exc_info=True)
+            sys.exit(1)
+
+    # 2. Handle explicit MongoDB ingestion/sync flag
+    if args.sync_mongo:
+        logger.info(f"CLI Trigger: Updating laws and metadata into MongoDB from {data_file}...")
+        try:
+            res_m = mongo_manager.ingest_laws(data_path=data_file)
+            logger.info(f"MongoDB Ingestion Finished: {res_m.get('message')}")
+        except Exception as e:
+            logger.error(f"Failed to update MongoDB: {e}", exc_info=True)
+            sys.exit(1)
+
+    # Launch Uvicorn dev server
+    uvicorn.run("backend.main:app", host=args.host, port=args.port, reload=args.reload, log_config=UVICORN_LOGGING_CONFIG)
+
