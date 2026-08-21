@@ -19,8 +19,8 @@ export const LandingPage: React.FC = () => {
       <header className="relative z-20 w-full max-w-7xl mx-auto px-6 py-5 flex items-center justify-between">
         {/* Brand Logo */}
         <div className="flex flex-col items-start">
-          <span className="text-xl font-bold tracking-tight text-white">Evidentia</span>
-          <p className="text-[11px] text-slate-400 font-medium tracking-wide">Hệ thống đa tác tử pháp lý thông minh</p>
+          <span className="text-xl font-bold tracking-tight text-white">Evidentia.</span>
+          <p className="text-[11px] text-slate-400 font-medium tracking-wide">Hệ thống trợ lý pháp lý đa tác tử thông minh</p>
         </div>
 
         {/*Actions */}
@@ -57,7 +57,7 @@ export const LandingPage: React.FC = () => {
       {/* Bottom Minimal Footer Strip (within the single-section page layout) */}
       <footer className="relative z-10 w-full max-w-7xl mx-auto px-6 py-4 flex flex-col sm:flex-row items-center justify-between text-[11px] text-slate-500 border-t border-slate-800/60">
         <div>
-          <span>© 2026 Evidentia - Hệ thống đa tác tử pháp lý thông minh</span>
+          <span>© 2026 Evidentia. - Hệ thống trợ lý pháp lý đa tác tử thông minh</span>
         </div>
         <div className="flex items-center gap-4 mt-2 sm:mt-0 font-medium">
           <span className="hover:text-slate-300 transition-colors cursor-pointer">Tài liệu API</span>

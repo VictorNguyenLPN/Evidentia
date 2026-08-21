@@ -180,7 +180,7 @@ class QdrantCloudManager:
 
     def sync_data_on_startup(self, data_path: Path = DATA_PATH) -> Dict[str, Any]:
         """
-        Auto-sync local data to Qdrant Cloud if missing or count mismatch.
+        Check Qdrant Cloud collection on startup. Ingests if collection is missing, warns if count mismatch.
         Called on FastAPI lifespan startup.
         """
         if not self.is_configured():
@@ -201,31 +201,27 @@ class QdrantCloudManager:
 
         try:
             if not self.collection_exists():
-                logger.info(f"Collection '{self.collection_name}' not found on Qdrant Cloud. Initiating full auto-ingestion...")
-                self.create_collection()
-                cloud_count = self.ingest_chunks(local_chunks)
+                msg = f"Collection '{self.collection_name}' not found on Qdrant Cloud. Auto-ingestion skipped. Use --ingest-qdrant to create and ingest."
+                logger.warning(msg)
                 return {
-                    "status": "created_and_ingested",
+                    "status": "not_found_warning",
                     "local_count": local_count,
-                    "cloud_count": cloud_count,
-                    "message": f"Successfully created collection and ingested {cloud_count} chunks to Qdrant Cloud."
+                    "cloud_count": 0,
+                    "message": msg
                 }
 
             cloud_count = self.get_collection_count()
             if cloud_count != local_count:
-                logger.info(
-                    f"Count mismatch detected: Cloud={cloud_count} vs Local={local_count}. Recreating collection and auto-syncing..."
-                )
-                self.create_collection()
-                cloud_count = self.ingest_chunks(local_chunks)
+                msg = f"Count mismatch detected on Qdrant Cloud: Cloud={cloud_count} vs Local={local_count}. Auto-ingestion skipped. Use --ingest-qdrant to re-ingest."
+                logger.warning(msg)
                 return {
-                    "status": "resynced",
+                    "status": "count_mismatch",
                     "local_count": local_count,
                     "cloud_count": cloud_count,
-                    "message": f"Resynced {cloud_count} chunks to Qdrant Cloud."
+                    "message": msg
                 }
 
-            logger.info(f"Qdrant Cloud is already in sync with local data (count = {cloud_count}).")
+            logger.info(f"Qdrant Cloud is in sync with local dataset ({cloud_count} items).")
             return {
                 "status": "in_sync",
                 "local_count": local_count,
@@ -234,14 +230,38 @@ class QdrantCloudManager:
             }
 
         except Exception as e:
-            logger.error(f"Error during Qdrant Cloud startup sync: {e}", exc_info=True)
+            logger.error(f"Error during Qdrant Cloud startup check: {e}", exc_info=True)
             return {
                 "status": "error",
                 "error": str(e),
                 "local_count": local_count,
                 "cloud_count": 0,
-                "message": f"Sync failed: {e}"
+                "message": f"Check failed: {e}"
             }
+
+    def ingest_dataset(self, data_path: Path = DATA_PATH) -> Dict[str, Any]:
+        """
+        Explicitly create collection and ingest dataset into Qdrant Cloud.
+        Only triggered by CLI argument (--ingest-qdrant) or manual invocation.
+        """
+        if not self.is_configured():
+            raise ValueError("Qdrant Cloud credentials (QDRANT_URL, QDRANT_API_KEY) are missing in .env")
+
+        path_obj = Path(data_path) if isinstance(data_path, (str, Path)) else DATA_PATH
+        if not path_obj.exists():
+            raise FileNotFoundError(f"Data file not found at {path_obj}")
+
+        with open(path_obj, "r", encoding="utf-8") as f:
+            local_chunks = json.load(f)
+
+        logger.info(f"Explicitly initiating Qdrant ingestion of {len(local_chunks)} chunks from {path_obj}...")
+        self.create_collection()
+        cloud_count = self.ingest_chunks(local_chunks)
+        return {
+            "status": "success",
+            "cloud_count": cloud_count,
+            "message": f"Successfully created collection '{self.collection_name}' and ingested {cloud_count} chunks to Qdrant Cloud."
+        }
 
 # Singleton instance
 qdrant_manager = QdrantCloudManager()
