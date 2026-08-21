@@ -96,3 +96,22 @@
 .animate-float-slow {
   animation: float-slow 4s ease-in-out infinite;
 }
+
+/* Custom Sleek Scrollbars & Disable Horizontal Overflow Scrollbars */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 0px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.4);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 0.7);
+}
