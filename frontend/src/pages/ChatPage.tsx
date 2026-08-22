@@ -391,13 +391,7 @@ export const ChatPage: React.FC = () => {
                 </div>
             )}
 
-            {/* ================= MAIN CHAT AREA ================= */}
             <main className="relative z-10 flex-1 flex flex-col h-full bg-white overflow-hidden">
-
-                {/* Top Header */}
-
-
-                {/* ================= MESSAGES & FOOTER SCROLL AREA ================= */}
                 <div className="flex-1 overflow-y-auto px-4 z-20 flex flex-col justify-between">
                     <header className="py-5 sticky top-0 z-0 h-14 flex items-center justify-between bg-transparent pointer-events-none">
                         <div className="flex items-center gap-2 pointer-events-auto">
@@ -416,7 +410,6 @@ export const ChatPage: React.FC = () => {
                             )}
                         </div>
 
-                        {/* Right Header Options */}
                         <div className="flex items-center gap-1.5 pointer-events-auto">
                             <Button
                                 variant="ghost"

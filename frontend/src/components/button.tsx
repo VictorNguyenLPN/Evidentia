@@ -43,7 +43,7 @@ export const Button: React.FC<ButtonProps> = ({
     };
 
     const sizeClasses = {
-        sm: variant === 'icon' ? 'p-1.5' : 'px-2.5 py-1.5 text-xs gap-1.5',
+        sm: variant === 'icon' ? 'p-2.5' : 'p-2.5 text-xs gap-1.5',
         md: variant === 'icon' ? 'p-2' : 'px-3 py-2 text-sm',
         lg: variant === 'icon' ? 'p-2.5' : 'px-4 py-2.5 text-base',
     };

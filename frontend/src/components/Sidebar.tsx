@@ -264,7 +264,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     } relative z-20 shrink-0 h-full border-r border-slate-200 flex flex-col justify-between select-none transition-[width] duration-300 ease-in-out overflow-hidden bg-white`}
             >
                 {/* ================= TOP SECTION ================= */}
-                <div className="px-4 shrink-0">
+                <div className="px-2.5 shrink-0">
                     {/* Header Row: Logo & Action Icons */}
                     <div className="flex items-center justify-between h-14 px-2.5">
                         {isSidebarOpen ? (
@@ -317,8 +317,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         <button
                             onClick={handleNewChat}
                             className={`w-full h-9 flex items-center gap-2.5 text-sm font-medium ${activeNav === 'chat' && !activeChatId
-                                    ? 'bg-slate-200/80 text-slate-900'
-                                    : 'text-slate-800 hover:bg-slate-200/80'
+                                ? 'bg-slate-200/80 text-slate-900'
+                                : 'text-slate-800 hover:bg-slate-200/80'
                                 } rounded-lg cursor-pointer transition-colors`}
                             title="Đoạn chat mới"
                         >
@@ -336,8 +336,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         <button
                             onClick={() => navigate('/laws')}
                             className={`w-full h-9 flex items-center gap-2.5 text-sm font-medium ${activeNav === 'laws'
-                                    ? 'bg-slate-200/80'
-                                    : 'text-slate-800 hover:bg-slate-200/80'
+                                ? 'bg-slate-200/80'
+                                : 'text-slate-800 hover:bg-slate-200/80'
                                 } rounded-lg cursor-pointer transition-colors`}
                             title="Danh sách luật"
                         >
@@ -355,6 +355,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         </button>
 
                         <button
+                            onClick={() => navigate('/achieves')}
                             className="w-full h-9 flex items-center gap-2.5 text-sm font-medium text-slate-800 hover:bg-slate-200/80 rounded-lg cursor-pointer transition-colors"
                             title="Kho lưu trữ chat"
                         >
@@ -373,7 +374,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
                 {/* ================= MIDDLE: HISTORY LIST && PINNED ================= */}
                 <div
-                    className={`flex-1 px-4 pt-4 overflow-y-auto overflow-x-hidden space-y-2 transition-opacity duration-200 ${isSidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
+                    className={`flex-1 px-2.5 pt-4 overflow-y-auto overflow-x-hidden space-y-2 transition-opacity duration-200 ${isSidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
                         }`}
                 >
                     {/* Danh sách ghim (chỉ hiện khi có đoạn chat được ghim) */}
@@ -406,8 +407,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                             key={`pinned-${item.id}`}
                                             onClick={() => handleSelectChat(item.id)}
                                             className={`group relative flex items-center justify-between px-2.5 py-2 rounded-lg cursor-pointer select-none transition-colors w-full text-left text-sm text-slate-900 ${activeChatId === item.id
-                                                    ? 'bg-slate-200'
-                                                    : 'bg-transparent hover:bg-slate-200/80'
+                                                ? 'bg-slate-200'
+                                                : 'bg-transparent hover:bg-slate-200/80'
                                                 }`}
                                         >
                                             <div
@@ -450,8 +451,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                                         );
                                                     }}
                                                     className={`p-1 rounded text-slate-400 hover:text-slate-900 transition-opacity ${openMenuChatId === item.id
-                                                            ? 'opacity-100 bg-slate-300/60'
-                                                            : 'opacity-0 group-hover:opacity-100'
+                                                        ? 'opacity-100 bg-slate-300/60'
+                                                        : 'opacity-0 group-hover:opacity-100'
                                                         }`}
                                                     title="Tùy chọn đoạn chat"
                                                 >
@@ -553,8 +554,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                         key={item.id}
                                         onClick={() => handleSelectChat(item.id)}
                                         className={`group relative flex items-center justify-between px-2.5 py-2 rounded-lg cursor-pointer select-none transition-colors w-full text-left text-sm text-slate-900 ${activeChatId === item.id
-                                                ? 'bg-slate-200'
-                                                : 'bg-transparent hover:bg-slate-200/80'
+                                            ? 'bg-slate-200'
+                                            : 'bg-transparent hover:bg-slate-200/80'
                                             }`}
                                     >
                                         <div
@@ -597,8 +598,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                                     );
                                                 }}
                                                 className={`p-1 rounded text-slate-400 hover:text-slate-900 transition-opacity ${openMenuChatId === item.id
-                                                        ? 'opacity-100 bg-slate-300/60'
-                                                        : 'opacity-0 group-hover:opacity-100'
+                                                    ? 'opacity-100 bg-slate-300/60'
+                                                    : 'opacity-0 group-hover:opacity-100'
                                                     }`}
                                                 title="Tùy chọn đoạn chat"
                                             >

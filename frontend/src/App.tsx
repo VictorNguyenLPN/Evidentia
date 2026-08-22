@@ -1,7 +1,8 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import LandingPage from './pages/LandingPage';
 import ChatPage from './pages/ChatPage';
 import LawsPage from './pages/LawsPage';
+import NotFoundPage from './pages/NotFoundPage';
 
 function App() {
   return (
@@ -12,8 +13,8 @@ function App() {
         <Route path="/chats/:chatId" element={<ChatPage />} />
         <Route path="/laws" element={<LawsPage />} />
         <Route path="/laws/:documentId" element={<LawsPage />} />
-        {/* Fallback route */}
-        <Route path="*" element={<Navigate to="/" replace />} />
+        {/* Fallback route for all unmatched URLs and sub-URLs */}
+        <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </BrowserRouter>
   );
