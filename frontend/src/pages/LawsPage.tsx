@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
     Search,
@@ -6,14 +6,14 @@ import {
     Copy,
     Check,
     Sparkles,
-    ArrowLeft,
     SlidersHorizontal,
     AlertCircle,
     Loader2,
     X,
+    MoreVertical,
 } from 'lucide-react';
-import Sidebar from '../components/Sidebar';
-
+import Button from '../components/button';
+import { useChat } from '../contexts/ChatContext';
 
 interface LawChapterSummary {
     chapter_number: string;
@@ -79,21 +79,10 @@ interface LawArticle {
     full_rendered_text: string;
 }
 
-interface ChatSession {
-    id: string;
-    title: string;
-    time: string;
-    tag: string;
-    isPinned: boolean;
-}
-
 export const LawsPage: React.FC = () => {
     const navigate = useNavigate();
     const { documentId: urlDocId } = useParams<{ documentId?: string }>();
-
-    // Sidebar state
-    const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-    const [chats, setChats] = useState<ChatSession[]>([]);
+    const { setIsSearchOpen } = useChat();
 
     // Laws state
     const [lawsData, setLawsData] = useState<{
@@ -136,21 +125,39 @@ export const LawsPage: React.FC = () => {
         return () => clearTimeout(timer);
     }, [searchTerm]);
 
-    // Fetch sidebar chats
-    useEffect(() => {
-        const fetchChats = async () => {
-            try {
-                const res = await fetch('/api/chats');
-                if (res.ok) {
-                    const data = await res.json();
-                    if (Array.isArray(data)) setChats(data);
-                }
-            } catch (e) {
-                console.warn('Could not fetch chats in LawsPage:', e);
+    // Calculate effect status counts dynamically from laws list
+    const statusCounts = useMemo(() => {
+        const laws = lawsData?.laws || [];
+        let active = 0; // Còn hiệu lực / Đang có hiệu lực
+        let partiallyExpired = 0; // Hết hiệu lực một phần
+        let expired = 0; // Hết hiệu lực
+
+        laws.forEach((doc) => {
+            const status = (doc.effect_status_name || '').trim().toLowerCase();
+            if (status.includes('hết hiệu lực một phần') || status.includes('ngưng hiệu lực một phần')) {
+                partiallyExpired++;
+            } else if (status.includes('hết hiệu lực') || status.includes('ngưng hiệu lực') || status.includes('hết hạn')) {
+                expired++;
+            } else if (status.includes('còn hiệu lực') || status.includes('đang có hiệu lực') || status.includes('có hiệu lực')) {
+                active++;
+            } else if (status) {
+                active++;
             }
+        });
+
+        return {
+            active,
+            partiallyExpired,
+            expired,
         };
-        fetchChats();
-    }, []);
+    }, [lawsData?.laws]);
+
+    // Calculate unique fields count
+    const totalFieldsCount = useMemo(() => {
+        const fields = new Set((lawsData?.laws || []).flatMap((d) => d.field_names || []));
+        return fields.size > 0 ? fields.size : 1;
+    }, [lawsData?.laws]);
+
 
     // Fetch overview of all laws
     const fetchLawsOverview = async () => {
@@ -316,36 +323,62 @@ export const LawsPage: React.FC = () => {
     };
 
     return (
-        <div className="flex h-screen w-screen text-slate-800 antialiased overflow-hidden font-sans">
-            {/* ================= REUSABLE SIDEBAR ================= */}
-            <Sidebar
-                activeNav="laws"
-                isSidebarOpen={isSidebarOpen}
-                setIsSidebarOpen={setIsSidebarOpen}
-                chats={chats}
-                setChats={setChats}
-            />
+        <div className="flex flex-col w-full h-full">
+            <header className="py-5 sticky top-0 z-0 h-14 flex items-center justify-end bg-transparent pointer-events-none">
+                <div className="flex items-center gap-1.5 pointer-events-auto">
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setIsSearchOpen(true)}
+                        title="Tìm kiếm"
+                    >
+                        <Search className="w-4 h-4 text-slate-800" />
+                        <span className="hidden sm:inline font-medium">Tìm kiếm</span>
+                    </Button>
+                    <Button
+                        variant="icon"
+                        size="sm"
+                        onClick={() => setIsSearchOpen(true)}
+                        title="Cấu hình"
+                    >
+                        <SlidersHorizontal className="w-4 h-4 text-slate-800" />
+                    </Button>
+                    <Button
+                        variant="icon"
+                        size="sm"
+                        onClick={() => setIsSearchOpen(true)}
+                        title="Tùy chọn khác"
+                    >
+                        <MoreVertical className="w-4 h-4 text-slate-800" />
+                    </Button>
+                </div>
+            </header>
 
-            {/* Main Area */}
             <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
+                <div className="flex-1 overflow-y-auto px-4 z-20 flex flex-col justify-between">
 
-                {/* Content Body */}
-                <div className="flex-1 overflow-hidden flex">
 
-                    {!selectedDocId ? (
-                        <div className="flex-1 overflow-y-auto p-6 space-y-8">
-                            {/* Dashboard Stats */}
+                    {/* {!selectedDocId ? (
+                        <div className="flex-1 overflow-y-auto px-6 pt-3.5 pb-6 space-y-8">
+
                             <div>
                                 <div className="flex items-center justify-between mb-4">
                                     <h2 className="text-lg font-bold text-slate-900 tracking-tight">
                                         Tổng quan
                                     </h2>
-                                    <div className="text-md text-emerald-600">
-                                        Cập nhật ngày 21/08/2026
-                                    </div>
                                 </div>
 
-                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-4">
+                                    <div className="bg-white border border-slate-200 rounded-xl p-4">
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                                                Trạng thái
+                                            </span>
+                                        </div>
+                                        <div className="text-2xl font-extrabold text-slate-900 mt-2">
+                                            Đã cập nhật
+                                        </div>
+                                    </div>
                                     <div className="bg-white border border-slate-200 rounded-xl p-4">
                                         <div className="flex items-center justify-between">
                                             <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
@@ -353,7 +386,7 @@ export const LawsPage: React.FC = () => {
                                             </span>
                                         </div>
                                         <div className="text-2xl font-extrabold text-slate-900 mt-2">
-                                            {lawsData?.total_laws ?? 1}
+                                            {lawsData?.total_laws ?? (lawsData?.laws?.length || 0)}
                                         </div>
                                     </div>
 
@@ -364,7 +397,7 @@ export const LawsPage: React.FC = () => {
                                             </span>
                                         </div>
                                         <div className="text-2xl font-extrabold text-slate-900 mt-2">
-                                            1
+                                            {totalFieldsCount}
                                         </div>
                                     </div>
 
@@ -375,36 +408,46 @@ export const LawsPage: React.FC = () => {
                                             </span>
                                         </div>
                                         <div className="text-2xl font-extrabold text-slate-900 mt-2">
-                                            {lawsData?.total_articles ?? 220}
+                                            {lawsData?.total_articles ?? 0}
                                         </div>
                                     </div>
 
                                     <div className="bg-white border border-slate-200 rounded-xl p-4">
                                         <div className="flex items-center justify-between">
                                             <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                                                Khoản
+                                                Còn hiệu lực
                                             </span>
                                         </div>
-                                        <div className="text-2xl font-extrabold text-slate-900 mt-2">
-                                            {(lawsData?.laws?.[0]?.stats?.total_clauses ?? 568)}
+                                        <div className="text-2xl font-extrabold text-green-500 mt-2">
+                                            {statusCounts.active}
                                         </div>
                                     </div>
 
                                     <div className="bg-white border border-slate-200 rounded-xl p-4">
                                         <div className="flex items-center justify-between">
                                             <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                                                Điểm
+                                                Hết hiệu lực một phần
                                             </span>
                                         </div>
-                                        <div className="text-2xl font-extrabold text-slate-900 mt-2">
-                                            {(lawsData?.laws?.[0]?.stats?.total_points ?? 287)}
+                                        <div className="text-2xl font-extrabold text-orange-500 mt-2">
+                                            {statusCounts.partiallyExpired}
                                         </div>
                                     </div>
 
+                                    <div className="bg-white border border-slate-200 rounded-xl p-4">
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                                                Hết hiệu lực
+                                            </span>
+                                        </div>
+                                        <div className="text-2xl font-extrabold text-red-500 mt-2">
+                                            {statusCounts.expired}
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
-                            {/* Documents Grid */}
+
                             <div>
                                 <div className="flex items-center justify-between mb-4">
                                     <div>
@@ -420,7 +463,7 @@ export const LawsPage: React.FC = () => {
                                         <span>Đang tải danh sách luật...</span>
                                     </div>
                                 ) : (
-                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                                    <div className="grid grid-cols-1 lg:grid-cols-1 gap-5">
                                         {(lawsData?.laws || []).map((doc) => (
                                             <button
                                                 key={doc.document_id}
@@ -496,69 +539,78 @@ export const LawsPage: React.FC = () => {
                             </div>
                         </div>
                     ) : (
-                        /* If DOCUMENT selected: Master-Detail Interactive Law Reader with Infinite Scroll */
                         <div className="flex-1 flex flex-col overflow-hidden">
-                            {/* Top Breadcrumb & Document Header with Back button */}
-                            <div className="bg-white px-6 py-3.5 flex items-center justify-between shrink-0">
 
-                                <h2 className="text-sm font-bold text-slate-900 truncate">
-                                    {selectedLaw?.document_title || 'Chi tiết văn bản'}
-                                </h2>
-
-                                {selectedLaw?.vbpl_url && (
-                                    <a
-                                        href={selectedLaw.vbpl_url}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-700 font-medium shrink-0 ml-3"
-                                    >
-                                        <span>Văn bản gốc</span>
-                                        <ExternalLink className="w-3.5 h-3.5" />
-                                    </a>
-                                )}
+                            <div className="px-6 py-3.5 gap-4">
+                                <div className='flex items-center justify-start shrink-0 gap-2'>
+                                    <h2 className="text-lg font-bold text-slate-900 truncate">
+                                        {selectedLaw?.document_title}
+                                    </h2>
+                                    {selectedLaw?.vbpl_url && (
+                                        <a
+                                            href={selectedLaw.vbpl_url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="flex items-center gap-1 text-indigo-600 hover:text-indigo-700 shrink-0"
+                                        >
+                                            <ExternalLink className="w-4 h-4" />
+                                        </a>
+                                    )}
+                                </div>
+                                <div className='flex items-center justify-start gap-4 mt-2'>
+                                    <h2 className="text-sm text-slate-600 truncate">
+                                        Ban hành: {selectedLaw?.issue_date}
+                                    </h2>
+                                    <h2 className="text-sm text-slate-600 truncate">
+                                        Hiệu lực từ: {selectedLaw?.effect_date}
+                                    </h2>
+                                    <h2 className="text-sm text-slate-600 truncate">
+                                        Hết hiệu lực: {selectedLaw?.expire_date ? selectedLaw?.expire_date : "Null"}
+                                    </h2>
+                                    <h2 className="text-sm text-slate-600 truncate">
+                                        Trạng thái: {selectedLaw?.effect_status_name}
+                                    </h2>
+                                </div>
                             </div>
 
                             <div className="flex-1 flex overflow-hidden">
-                                {/* Right Pane: Infinite Scroll Articles Feed */}
-                                {/* <div
+                                <div
                                     ref={scrollContainerRef}
-                                    className="flex-1 overflow-y-auto p-6 space-y-5 bg-[#f8fafc]"
+                                    className="flex-1 overflow-y-auto space-y-5"
                                 >
-
-                                    
                                     {articles.length === 0 && !isLoadingArticles ? (
-                                        <div className="bg-white border border-slate-200 rounded-2xl p-12 text-center">
+                                        <div className="bg-white text-center h-full flex flex-col items-center justify-center">
                                             <AlertCircle className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-                                            <h4 className="text-sm font-bold text-slate-800">Không tìm thấy điều luật phù hợp</h4>
-                                            <p className="text-xs text-slate-500 mt-1">
+                                            <h4 className="text-lg font-bold text-slate-800">Văn bản không tồn tại</h4>
+                                            <p className="text-sm text-slate-500 mt-1">
                                                 Hãy thử thay đổi từ khóa tìm kiếm hoặc chọn lại chương mục.
                                             </p>
                                         </div>
                                     ) : (
-                                        <div className="space-y-4">
+                                        <div className="space-y-4 px-6 py-3.5">
                                             {articles.map((art) => (
                                                 <div
                                                     key={`${art.document_id}_${art.article_number}`}
                                                     id={`article-${art.article_number}`}
                                                     className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs hover:border-slate-300 transition-all"
                                                 >
-                                                    
-                                                    <div className="flex items-start justify-between gap-4 pb-3 border-b border-slate-100">
+
+                                                    <div className="flex items-start justify-between">
                                                         <div>
-                                                            <div className="flex items-center gap-2 flex-wrap mb-1">
-                                                                <span className="px-2 py-0.5 text-[11px] font-bold bg-indigo-50 text-indigo-700 rounded-md font-mono">
+                                                            <div className="flex items-center gap-3 flex-wrap">
+                                                                <span className="font-bold text-indigo-700 rounded-md">
                                                                     Điều {art.article_number}
                                                                 </span>
-                                                                <span className="text-xs text-slate-400 font-medium">
+                                                                <span className="text-slate-400 font-bold">
                                                                     Chương {art.chapter_number}: {art.chapter_title}
                                                                 </span>
                                                             </div>
-                                                            <h3 className="text-base font-bold text-slate-900 leading-snug">
+                                                            <h3 className="text-base font-bold text-slate-900 leading-snug mt-2">
                                                                 {art.article_title}
                                                             </h3>
                                                         </div>
 
-                                                        
+
                                                         <div className="flex items-center gap-1.5 shrink-0">
                                                             <button
                                                                 onClick={() => handleCopyArticle(art)}
@@ -589,16 +641,16 @@ export const LawsPage: React.FC = () => {
                                                         </div>
                                                     </div>
 
-                                                    
-                                                    <div className="pt-3.5 space-y-3 text-sm text-slate-800 leading-relaxed">
-                                                        
+
+                                                    <div className="pt-4 space-y-3 text-sm text-slate-800 leading-relaxed">
+
                                                         {art.article_text && (
                                                             <p className="text-slate-700 font-normal">
                                                                 {art.article_text}
                                                             </p>
                                                         )}
 
-                                                        
+
                                                         {art.clauses && art.clauses.length > 0 && (
                                                             <div className="space-y-2.5">
                                                                 {art.clauses.map((cl) => {
@@ -619,7 +671,7 @@ export const LawsPage: React.FC = () => {
                                                                                 </div>
                                                                             )}
 
-                                                                            
+
                                                                             {cl.points && cl.points.length > 0 && (
                                                                                 <div className="pl-6 space-y-1.5 border-l-2 border-slate-100 ml-1.5 my-1">
                                                                                     {cl.points.map((pt, pIdx) => (
@@ -641,7 +693,7 @@ export const LawsPage: React.FC = () => {
                                                             </div>
                                                         )}
 
-                                                        
+
                                                         {art.amendment_notes && art.amendment_notes.length > 0 && (
                                                             <div className="mt-3 p-3 bg-amber-50/80 border border-amber-200/70 rounded-xl text-xs text-amber-800 space-y-1">
                                                                 <div className="font-semibold flex items-center gap-1 text-amber-900">
@@ -661,7 +713,7 @@ export const LawsPage: React.FC = () => {
                                         </div>
                                     )}
 
-                                    
+
                                     <div ref={observerTarget} className="py-6 flex items-center justify-center">
                                         {isLoadingArticles && (
                                             <div className="flex items-center gap-2 text-xs font-medium text-slate-500 bg-white px-4 py-2 rounded-full border border-slate-200 shadow-xs">
@@ -675,10 +727,10 @@ export const LawsPage: React.FC = () => {
                                             </div>
                                         )}
                                     </div>
-                                </div> */}
-                                {/* Left Pane: Chapter TOC & Fast Navigator */}
-                                {/* <div className="w-80 bg-white border-r border-slate-200/80 flex flex-col shrink-0">
-                                    
+                                </div>
+
+                                <div className="w-80 bg-white border-r border-slate-200/80 flex flex-col shrink-0">
+
                                     <div className="p-6 border-b border-slate-100 space-y-2.5">
                                         <div className="relative">
                                             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -711,7 +763,7 @@ export const LawsPage: React.FC = () => {
                                         </div>
                                     </div>
 
-                                    
+
                                     <div className="flex-1 overflow-y-auto p-2 space-y-1">
                                         <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 px-3 py-1.5">
                                             Mục lục {selectedLaw?.chapters?.length || 0} Chương
@@ -751,10 +803,10 @@ export const LawsPage: React.FC = () => {
                                             );
                                         })}
                                     </div>
-                                </div> */}
+                                </div>
                             </div>
                         </div>
-                    )}
+                    )} */}
                 </div>
             </main>
         </div>

@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import Button from '../components/button';
-import Sidebar, { type ChatSession } from '../components/Sidebar';
+import { useChat, type ChatSession } from '../contexts/ChatContext';
 
 interface Citation {
     document_title: string;
@@ -65,15 +65,28 @@ const generateChatId = (email: string = CURRENT_USER_EMAIL): string => {
     return `${s1}${s2}`;
 };
 
+const formatChatHeaderDate = (isoStringOrDate?: string | null): string => {
+    const d = isoStringOrDate ? new Date(isoStringOrDate) : new Date();
+    if (isNaN(d.getTime())) return '';
+
+    const daysOfWeek = ['Chủ Nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
+    const dayOfWeek = daysOfWeek[d.getDay()];
+
+    const time = d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+    const date = d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+    return `${dayOfWeek}, ${date}, ${time}`;
+};
+
 export const ChatPage: React.FC = () => {
     const { chatId } = useParams<{ chatId?: string }>();
     const navigate = useNavigate();
     const location = useLocation();
+    const { setChats, fetchChats, setIsSearchOpen } = useChat();
 
-    const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-    const [isSearchOpen, setIsSearchOpen] = useState(false);
     const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
     const [activeChatId, setActiveChatId] = useState<string | null>(chatId || null);
+    const [chatCreatedAt, setChatCreatedAt] = useState<string | null>(null);
     const [inputPrompt, setInputPrompt] = useState('');
     const [targetDate, setTargetDate] = useState<string>('');
     const [messages, setMessages] = useState<Message[]>([]);
@@ -82,8 +95,6 @@ export const ChatPage: React.FC = () => {
 
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
-
-    const [chats, setChats] = useState<ChatSession[]>([]);
 
     // Handle initial prompt from navigation state (e.g. from LawsPage "Hỏi AI về điều này")
     useEffect(() => {
@@ -100,30 +111,12 @@ export const ChatPage: React.FC = () => {
         }
     }, [location.state]);
 
-    // Fetch all chats from MongoDB / backend on mount
-    const fetchChats = async () => {
-        try {
-            const res = await fetch('/api/chats');
-            if (res.ok) {
-                const data = await res.json();
-                if (Array.isArray(data)) {
-                    setChats(data);
-                }
-            }
-        } catch (err) {
-            console.warn('Could not fetch chats from backend:', err);
-        }
-    };
-
-    useEffect(() => {
-        fetchChats();
-    }, []);
-
     // Load messages when URL chatId changes
     useEffect(() => {
         if (!chatId) {
             setActiveChatId(null);
             setMessages([]);
+            setChatCreatedAt(null);
             return;
         }
 
@@ -141,12 +134,20 @@ export const ChatPage: React.FC = () => {
                 const res = await fetch(`/api/chats/${encodeURIComponent(chatId)}`);
                 if (res.ok) {
                     const chatDoc = await res.json();
-                    if (chatDoc && Array.isArray(chatDoc.messages)) {
-                        setMessages(chatDoc.messages);
+                    if (chatDoc) {
+                        if (chatDoc.created_at) {
+                            setChatCreatedAt(chatDoc.created_at);
+                        } else if (chatDoc.updated_at) {
+                            setChatCreatedAt(chatDoc.updated_at);
+                        }
+                        if (Array.isArray(chatDoc.messages)) {
+                            setMessages(chatDoc.messages);
+                        }
                     }
                 } else if (res.status === 404) {
                     console.warn(`Chat ${chatId} not found`);
                     setMessages([]);
+                    setChatCreatedAt(null);
                 }
             } catch (err) {
                 console.warn('Error loading chat messages:', err);
@@ -161,33 +162,7 @@ export const ChatPage: React.FC = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages, isLoading]);
 
-    // Select chat handler
-    const handleSelectChat = (id: string) => {
-        isSendingMessageRef.current = null;
-        navigate(`/chats/${encodeURIComponent(id)}`);
-    };
-
-    // New chat handler
-    const handleNewChat = () => {
-        isSendingMessageRef.current = null;
-        navigate('/chats');
-        setActiveChatId(null);
-        setMessages([]);
-        setInputPrompt('');
-        setTargetDate('');
-    };
-
     const isSendingMessageRef = useRef<string | null>(null);
-
-    // Delete Chat callback if active chat was deleted
-    const handleDeleteChat = (id: string) => {
-        if (activeChatId === id || chatId === id) {
-            isSendingMessageRef.current = null;
-            navigate('/chats');
-            setActiveChatId(null);
-            setMessages([]);
-        }
-    };
 
     // Auto resize textarea
     useEffect(() => {
@@ -197,20 +172,17 @@ export const ChatPage: React.FC = () => {
         }
     }, [inputPrompt]);
 
-    // Handle shortcut Cmd/Ctrl + K for search modal
+
+    // Handle Escape key to close citation modal
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
-            if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-                e.preventDefault();
-                setIsSearchOpen(prev => !prev);
-            }
-            if (e.key === 'Escape' && isSearchOpen) {
-                setIsSearchOpen(false);
+            if (e.key === 'Escape' && selectedCitation) {
+                setSelectedCitation(null);
             }
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [isSearchOpen]);
+    }, [selectedCitation]);
 
     // Send Message Handler
     const handleSendMessage = async () => {
@@ -228,10 +200,15 @@ export const ChatPage: React.FC = () => {
             navigate(`/chats/${encodeURIComponent(currentChatId)}`, { replace: true });
 
             // Optimistically add to sidebar immediately
+            const now = new Date();
+            setChatCreatedAt(now.toISOString());
+            const formattedTimeDate = `${now.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} - ${now.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })}`;
             const newChatSession: ChatSession = {
                 id: currentChatId,
                 title: queryText,
-                time: 'Vừa xong',
+                time: formattedTimeDate,
+                created_at: now.toISOString(),
+                updated_at: now.toISOString(),
                 tag: 'Pháp luật',
                 isPinned: false
             };
@@ -310,24 +287,7 @@ export const ChatPage: React.FC = () => {
     };
 
     return (
-        <div className="relative h-screen w-full bg-slate-50 text-slate-800 flex overflow-hidden font-sans">
-
-            {/* ================= SIDEBAR ================= */}
-            <Sidebar
-                activeNav="chat"
-                activeChatId={activeChatId}
-                isSidebarOpen={isSidebarOpen}
-                setIsSidebarOpen={setIsSidebarOpen}
-                isSearchOpen={isSearchOpen}
-                setIsSearchOpen={setIsSearchOpen}
-                chats={chats}
-                setChats={setChats}
-                onNewChat={handleNewChat}
-                onSelectChat={handleSelectChat}
-                onDeleteChat={handleDeleteChat}
-            />
-
-            {/* ================= CITATION DETAIL MODAL ================= */}
+        <div className="flex flex-col w-full h-full">
             {selectedCitation && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs">
                     <div className="fixed inset-0" onClick={() => setSelectedCitation(null)} />
@@ -391,54 +351,39 @@ export const ChatPage: React.FC = () => {
                 </div>
             )}
 
-            {/* ================= MAIN CHAT AREA ================= */}
+            <header className="py-5 sticky top-0 z-0 h-14 flex items-center justify-end bg-transparent pointer-events-none">
+                <div className="flex items-center gap-1.5 pointer-events-auto">
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setIsSearchOpen(true)}
+                        title="Tìm kiếm"
+                    >
+                        <Search className="w-4 h-4 text-slate-800" />
+                        <span className="hidden sm:inline font-medium">Tìm kiếm</span>
+                    </Button>
+                    <Button
+                        variant="icon"
+                        size="sm"
+                        onClick={() => setIsSearchOpen(true)}
+                        title="Cấu hình"
+                    >
+                        <SlidersHorizontal className="w-4 h-4 text-slate-800" />
+                    </Button>
+                    <Button
+                        variant="icon"
+                        size="sm"
+                        onClick={() => setIsSearchOpen(true)}
+                        title="Tùy chọn khác"
+                    >
+                        <MoreVertical className="w-4 h-4 text-slate-800" />
+                    </Button>
+                </div>
+            </header>
+
             <main className="relative z-10 flex-1 flex flex-col h-full bg-white overflow-hidden">
-
-                {/* Top Header */}
-
-
-                {/* ================= MESSAGES & FOOTER SCROLL AREA ================= */}
                 <div className="flex-1 overflow-y-auto px-4 z-20 flex flex-col justify-between">
-                    <header className="py-5 sticky top-0 z-0 h-14 flex items-center justify-between bg-transparent pointer-events-none">
-                        <div className="flex items-center gap-2 pointer-events-auto">
-                            {targetDate && (
-                                <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200/60 flex items-center gap-1.5">
-                                    <Calendar className="w-4 h-4" />
-                                    Áp dụng tại mốc: {targetDate}
-                                    <button
-                                        onClick={() => setTargetDate('')}
-                                        className="hover:text-indigo-900"
-                                        title="Xóa mốc thời gian"
-                                    >
-                                        <X className="w-3 h-3" />
-                                    </button>
-                                </span>
-                            )}
-                        </div>
-
-                        {/* Right Header Options */}
-                        <div className="flex items-center gap-1.5 pointer-events-auto">
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => setIsSearchOpen(true)}
-                                className="gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700"
-                            >
-                                <Search className="w-4 h-4" />
-                                <span className="hidden sm:inline font-medium">Tìm kiếm</span>
-                            </Button>
-
-                            <Button variant="icon" size="sm" title="Cấu hình">
-                                <SlidersHorizontal className="w-4 h-4" />
-                            </Button>
-                            <Button variant="icon" size="sm" title="Tùy chọn khác">
-                                <MoreVertical className="w-4 h-4" />
-                            </Button>
-                        </div>
-                    </header>
-
                     {messages.length === 0 ? (
-                        /* Welcome Hero Screen */
                         <div className="flex-1 flex flex-col items-center justify-center my-auto">
                             <div className="max-w-2xl w-full text-center space-y-5">
                                 <div className="space-y-2">
@@ -453,19 +398,25 @@ export const ChatPage: React.FC = () => {
                         </div>
                     ) : (
                         /* Active Conversation Messages */
-                        <div className="relative z-10 max-w-4xl w-full mx-auto space-y-6 pb-4">
+                        <div className="relative z-10 max-w-4xl w-full mx-auto space-y-3.5 pb-4">
+                            {/* Chat Header Timestamp Row */}
+                            <div className="flex items-center justify-center select-none">
+                                <span className="text-sm text-slate-400 font-medium">
+                                    {formatChatHeaderDate(chatCreatedAt)}
+                                </span>
+                            </div>
+
                             {messages.map((msg) => (
                                 <div
                                     key={msg.id}
                                     className={`flex flex-col ${msg.sender === 'user' ? 'items-end' : 'items-start'}`}
                                 >
                                     {msg.sender === 'user' ? (
-                                        <div className="max-w-3xl text-black">
+                                        <div className="max-w-2xl text-black">
                                             <div className="flex items-center justify-end gap-2 mb-1.5 text-[11px] text-gray-700">
                                                 {msg.targetDate && (
                                                     <span>Mốc: {msg.targetDate}</span>
                                                 )}
-                                                <span>{msg.timestamp}</span>
                                             </div>
                                             <p className="text-sm sm:text-base leading-relaxed whitespace-pre-wrap bg-indigo-100 px-4 py-3 rounded-2xl">
                                                 {msg.text}
@@ -509,7 +460,6 @@ export const ChatPage: React.FC = () => {
 
                                             <div className="flex items-center justify-between pt-2 border-t border-slate-200/50 text-[11px] text-slate-400">
                                                 <span>Evidentia. - Hệ thống trợ lý pháp lý đa tác tử thông minh</span>
-                                                <span>{msg.timestamp}</span>
                                             </div>
                                         </div>
                                     )}
