@@ -2,7 +2,6 @@ import React from 'react';
 import {
   ArrowRight,
   BookOpen,
-  Sparkles,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 

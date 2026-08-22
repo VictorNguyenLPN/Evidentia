@@ -3,7 +3,7 @@ import React from 'react';
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
     circle?: boolean;
     variant?: 'sidebar' | 'icon' | 'ghost' | 'primary';
-    size?: 'sm' | 'md' | 'lg';
+    size?: 'sm' | 'md' | 'xs';
     icon?: React.ReactNode;
     active?: boolean;
     children?: React.ReactNode;
@@ -45,7 +45,7 @@ export const Button: React.FC<ButtonProps> = ({
     const sizeClasses = {
         sm: variant === 'icon' ? 'p-2.5' : 'p-2.5 text-xs gap-1.5',
         md: variant === 'icon' ? 'p-2' : 'px-3 py-2 text-sm',
-        lg: variant === 'icon' ? 'p-2.5' : 'px-4 py-2.5 text-base',
+        xs: variant === 'icon' ? 'p-1.5' : 'p-4',
     };
 
     return (

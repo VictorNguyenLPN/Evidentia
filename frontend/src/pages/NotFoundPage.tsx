@@ -1,7 +1,6 @@
 import React from 'react';
 import {
     ArrowLeft,
-    Home,
     ArrowRight,
     BookOpen
 } from 'lucide-react';

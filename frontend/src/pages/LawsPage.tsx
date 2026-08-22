@@ -6,14 +6,14 @@ import {
     Copy,
     Check,
     Sparkles,
-    ArrowLeft,
     SlidersHorizontal,
     AlertCircle,
     Loader2,
     X,
+    MoreVertical,
 } from 'lucide-react';
-import Sidebar from '../components/Sidebar';
-
+import Button from '../components/button';
+import { useChat } from '../contexts/ChatContext';
 
 interface LawChapterSummary {
     chapter_number: string;
@@ -79,21 +79,10 @@ interface LawArticle {
     full_rendered_text: string;
 }
 
-interface ChatSession {
-    id: string;
-    title: string;
-    time: string;
-    tag: string;
-    isPinned: boolean;
-}
-
 export const LawsPage: React.FC = () => {
     const navigate = useNavigate();
     const { documentId: urlDocId } = useParams<{ documentId?: string }>();
-
-    // Sidebar state
-    const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-    const [chats, setChats] = useState<ChatSession[]>([]);
+    const { setIsSearchOpen } = useChat();
 
     // Laws state
     const [lawsData, setLawsData] = useState<{
@@ -169,21 +158,6 @@ export const LawsPage: React.FC = () => {
         return fields.size > 0 ? fields.size : 1;
     }, [lawsData?.laws]);
 
-    // Fetch sidebar chats
-    useEffect(() => {
-        const fetchChats = async () => {
-            try {
-                const res = await fetch('/api/chats');
-                if (res.ok) {
-                    const data = await res.json();
-                    if (Array.isArray(data)) setChats(data);
-                }
-            } catch (e) {
-                console.warn('Could not fetch chats in LawsPage:', e);
-            }
-        };
-        fetchChats();
-    }, []);
 
     // Fetch overview of all laws
     const fetchLawsOverview = async () => {
@@ -349,19 +323,42 @@ export const LawsPage: React.FC = () => {
     };
 
     return (
-        <div className="flex h-screen w-screen text-slate-800 antialiased overflow-hidden font-sans">
-            <Sidebar
-                activeNav="laws"
-                isSidebarOpen={isSidebarOpen}
-                setIsSidebarOpen={setIsSidebarOpen}
-                chats={chats}
-                setChats={setChats}
-            />
+        <div className="flex flex-col w-full h-full">
+            <header className="py-5 sticky top-0 z-0 h-14 flex items-center justify-end bg-transparent pointer-events-none">
+                <div className="flex items-center gap-1.5 pointer-events-auto">
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setIsSearchOpen(true)}
+                        title="Tìm kiếm"
+                    >
+                        <Search className="w-4 h-4 text-slate-800" />
+                        <span className="hidden sm:inline font-medium">Tìm kiếm</span>
+                    </Button>
+                    <Button
+                        variant="icon"
+                        size="sm"
+                        onClick={() => setIsSearchOpen(true)}
+                        title="Cấu hình"
+                    >
+                        <SlidersHorizontal className="w-4 h-4 text-slate-800" />
+                    </Button>
+                    <Button
+                        variant="icon"
+                        size="sm"
+                        onClick={() => setIsSearchOpen(true)}
+                        title="Tùy chọn khác"
+                    >
+                        <MoreVertical className="w-4 h-4 text-slate-800" />
+                    </Button>
+                </div>
+            </header>
 
             <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
-                <div className="flex-1 overflow-hidden flex">
+                <div className="flex-1 overflow-y-auto px-4 z-20 flex flex-col justify-between">
 
-                    {!selectedDocId ? (
+
+                    {/* {!selectedDocId ? (
                         <div className="flex-1 overflow-y-auto px-6 pt-3.5 pb-6 space-y-8">
 
                             <div>
@@ -450,7 +447,7 @@ export const LawsPage: React.FC = () => {
                                 </div>
                             </div>
 
-                            
+
                             <div>
                                 <div className="flex items-center justify-between mb-4">
                                     <div>
@@ -733,7 +730,7 @@ export const LawsPage: React.FC = () => {
                                 </div>
 
                                 <div className="w-80 bg-white border-r border-slate-200/80 flex flex-col shrink-0">
-                                    
+
                                     <div className="p-6 border-b border-slate-100 space-y-2.5">
                                         <div className="relative">
                                             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -766,7 +763,7 @@ export const LawsPage: React.FC = () => {
                                         </div>
                                     </div>
 
-                                    
+
                                     <div className="flex-1 overflow-y-auto p-2 space-y-1">
                                         <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 px-3 py-1.5">
                                             Mục lục {selectedLaw?.chapters?.length || 0} Chương
@@ -809,7 +806,7 @@ export const LawsPage: React.FC = () => {
                                 </div>
                             </div>
                         </div>
-                    )}
+                    )} */}
                 </div>
             </main>
         </div>
