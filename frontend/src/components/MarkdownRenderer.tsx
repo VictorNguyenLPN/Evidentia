@@ -13,7 +13,7 @@ const markdownComponents: Components = {
         </h1>
     ),
     h2: ({ children }) => (
-        <h2 className="text-lg sm:text-xl font-bold text-slate-900 mt-5 mb-2.5 text-indigo-950">
+        <h2 className="text-lg sm:text-xl font-bold text-slate-900 mt-5 mb-2.5">
             {children}
         </h2>
     ),
@@ -28,7 +28,7 @@ const markdownComponents: Components = {
         </h4>
     ),
     p: ({ children }) => (
-        <p className="mb-3 leading-relaxed text-slate-800 last:mb-0">
+        <p className="mb-3 leading-relaxed text-slate-800">
             {children}
         </p>
     ),
