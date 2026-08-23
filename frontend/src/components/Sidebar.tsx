@@ -244,7 +244,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                     }
                                 }}
                                 placeholder="Tìm kiếm đoạn chat..."
-                                className="w-full py-4 text-sm bg-transparent text-slate-800 placeholder-slate-400 focus:outline-none"
+                                className="w-full py-4 text-sm bg-transparent text-slate-800 focus:outline-none"
                             />
                             {searchQuery && (
                                 <button
@@ -714,7 +714,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     </div>
                 </div>
 
-                <div className="h-[68px] p-2.5 flex items-center relative shrink-0 border-t border-slate-200">
+                <div className="h-17 p-2.5 flex items-center relative shrink-0 border-t border-slate-200">
                     {isProfileMenuOpen && (
                         <>
                             <div
