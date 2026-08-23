@@ -1,9 +1,12 @@
+import json
 import logging
 from contextlib import asynccontextmanager
 from typing import Optional, List, Dict, Any
 
 # pyrefly: ignore [missing-import]
 from fastapi import FastAPI, HTTPException, status
+# pyrefly: ignore [missing-import]
+from fastapi.responses import StreamingResponse
 # pyrefly: ignore [missing-import]
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
@@ -363,6 +366,63 @@ def chat_endpoint(payload: ChatRequest):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error executing Legal Agentic-RAG pipeline: {str(e)}"
         )
+
+@app.post("/api/chat/stream")
+def chat_stream_endpoint(payload: ChatRequest):
+    """
+    Real-Time Streaming Agentic-RAG Chat Endpoint (SSE).
+    Progressively emits step updates (query analysis, retrieval) and answer tokens,
+    then automatically persists the complete turn in MongoDB on completion.
+    """
+    if not payload.query.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Query cannot be empty"
+        )
+
+    def event_generator():
+        try:
+            for event in legal_agentic_rag.run_stream(
+                query=payload.query.strip(),
+                target_date=payload.target_date,
+                top_k=payload.top_k or 5
+            ):
+                if event.get("type") == "done":
+                    # Persist conversation turn in MongoDB
+                    save_res = mongo_manager.save_chat_turn(
+                        chat_id=payload.chat_id,
+                        query=payload.query.strip(),
+                        answer=event.get("answer", ""),
+                        target_date=payload.target_date,
+                        analysis=event.get("analysis"),
+                        citations=event.get("citations"),
+                        steps=event.get("steps")
+                    )
+                    event["chat_id"] = save_res.get("chat_id")
+                    event["title"] = save_res.get("title")
+                    event["tag"] = save_res.get("tag")
+                    event["user_message"] = save_res.get("user_message")
+                    event["assistant_message"] = save_res.get("assistant_message")
+
+                # SSE message format
+                yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
+        except Exception as e:
+            logger.error(f"Error in chat stream: {e}", exc_info=True)
+            err_event = {
+                "type": "error",
+                "detail": str(e)
+            }
+            yield f"data: {json.dumps(err_event, ensure_ascii=False)}\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no"
+        }
+    )
 
 if __name__ == "__main__":
     import argparse

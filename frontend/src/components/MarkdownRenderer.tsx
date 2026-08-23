@@ -124,7 +124,7 @@ const markdownComponents: Components = {
 
 export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, className = '' }) => {
     return (
-        <div className={`w-full text-sm sm:text-base leading-relaxed text-slate-900 ${className}`}>
+        <div className={`px-2.5 w-full text-sm sm:text-base leading-relaxed text-slate-900 ${className}`}>
             <ReactMarkdown components={markdownComponents}>
                 {content}
             </ReactMarkdown>

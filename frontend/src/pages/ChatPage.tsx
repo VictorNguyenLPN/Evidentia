@@ -11,26 +11,25 @@ import {
     CheckCircle2,
     Loader2,
     Search,
+    Sparkles,
 } from 'lucide-react';
 import MarkdownRenderer from '../components/MarkdownRenderer';
 import Button from '../components/button';
+import ReasoningProcess, { type PipelineStep, type QueryAnalysis } from '../components/ReasoningProcess';
 import { useChat, type ChatSession } from '../contexts/ChatContext';
 
 interface Citation {
     document_title: string;
     hierarchy_path: string[];
-    legal_content: string;
+    legal_content?: string;
+    text?: string;
     issue_date?: string;
     effect_date?: string;
     effect_status_name?: string;
     doc_type?: string;
     hybrid_score?: number;
-}
-
-interface PipelineStep {
-    step: string;
-    status: string;
-    message: string;
+    score?: number;
+    vbpl_url?: string;
 }
 
 interface Message {
@@ -39,14 +38,10 @@ interface Message {
     text: string;
     timestamp: string;
     targetDate?: string;
-    analysis?: {
-        search_query?: string;
-        intent?: string;
-        target_date?: string;
-        domain?: string;
-    };
+    analysis?: QueryAnalysis;
     citations?: Citation[];
     steps?: PipelineStep[];
+    isStreaming?: boolean;
 }
 
 const CURRENT_USER_EMAIL = 'huy.nguyen@evidentia.vn';
@@ -184,7 +179,7 @@ export const ChatPage: React.FC = () => {
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [selectedCitation]);
 
-    // Send Message Handler
+    // Send Message Handler (Real-Time SSE Streaming)
     const handleSendMessage = async () => {
         const queryText = inputPrompt.trim();
         if (!queryText || isLoading) return;
@@ -224,12 +219,25 @@ export const ChatPage: React.FC = () => {
             targetDate: targetDate || undefined,
         };
 
-        setMessages(prev => [...prev, userMsg]);
+        const assistantMsgId = String(Date.now() + 1);
+        const initialAssistantMsg: Message = {
+            id: assistantMsgId,
+            sender: 'assistant',
+            text: '',
+            timestamp: currentTime,
+            targetDate: targetDate || undefined,
+            analysis: undefined,
+            citations: [],
+            steps: [],
+            isStreaming: true,
+        };
+
+        setMessages(prev => [...prev, userMsg, initialAssistantMsg]);
         setInputPrompt('');
         setIsLoading(true);
 
         try {
-            const res = await fetch('/api/chat', {
+            const res = await fetch('/api/chat/stream', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -240,40 +248,138 @@ export const ChatPage: React.FC = () => {
                 }),
             });
 
-            if (!res.ok) {
+            if (!res.ok || !res.body) {
                 const errorData = await res.json().catch(() => ({ detail: 'Unknown error' }));
-                throw new Error(errorData.detail || 'Lỗi xử lý truy vấn pháp lý');
+                throw new Error(errorData.detail || 'Lỗi kết nối máy chủ');
             }
 
-            const data = await res.json();
-            const assistantMsg: Message = {
-                id: String(Date.now() + 1),
-                sender: 'assistant',
-                text: data.answer,
-                timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                targetDate: targetDate || undefined,
-                analysis: data.analysis,
-                citations: data.citations || [],
-                steps: data.steps || [],
-            };
+            const reader = res.body.getReader();
+            const decoder = new TextDecoder('utf-8');
+            let buffer = '';
 
-            setMessages(prev => [...prev, assistantMsg]);
+            while (true) {
+                const { value, done } = await reader.read();
+                if (done) break;
 
-            if (data.chat_id) {
-                setActiveChatId(data.chat_id);
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n\n');
+                buffer = lines.pop() || '';
+
+                for (const block of lines) {
+                    const trimmed = block.trim();
+                    if (!trimmed.startsWith('data:')) continue;
+                    const jsonStr = trimmed.replace(/^data:\s*/, '');
+                    if (!jsonStr) continue;
+
+                    try {
+                        const event = JSON.parse(jsonStr);
+
+                        if (event.type === 'step_start') {
+                            setMessages(prev =>
+                                prev.map(msg => {
+                                    if (msg.id !== assistantMsgId) return msg;
+                                    const existingSteps = msg.steps || [];
+                                    const stepIdx = existingSteps.findIndex(s => s.step === event.step);
+                                    const newSteps = [...existingSteps];
+                                    if (stepIdx >= 0) {
+                                        newSteps[stepIdx] = {
+                                            ...newSteps[stepIdx],
+                                            status: 'running',
+                                            message: event.message
+                                        };
+                                    } else {
+                                        newSteps.push({
+                                            step: event.step,
+                                            status: 'running',
+                                            message: event.message
+                                        });
+                                    }
+                                    return { ...msg, steps: newSteps, isStreaming: true };
+                                })
+                            );
+                        } else if (event.type === 'step_complete') {
+                            setMessages(prev =>
+                                prev.map(msg => {
+                                    if (msg.id !== assistantMsgId) return msg;
+                                    const existingSteps = msg.steps || [];
+                                    const stepIdx = existingSteps.findIndex(s => s.step === event.step);
+                                    const newSteps = [...existingSteps];
+                                    if (stepIdx >= 0) {
+                                        newSteps[stepIdx] = {
+                                            ...newSteps[stepIdx],
+                                            status: 'completed',
+                                            message: event.message || newSteps[stepIdx].message,
+                                            details: event.details || newSteps[stepIdx].details
+                                        };
+                                    } else {
+                                        newSteps.push({
+                                            step: event.step,
+                                            status: 'completed',
+                                            message: event.message,
+                                            details: event.details
+                                        });
+                                    }
+                                    return {
+                                        ...msg,
+                                        steps: newSteps,
+                                        analysis: event.analysis || msg.analysis,
+                                        citations: event.citations || msg.citations,
+                                        isStreaming: true
+                                    };
+                                })
+                            );
+                        } else if (event.type === 'token') {
+                            setMessages(prev =>
+                                prev.map(msg => {
+                                    if (msg.id !== assistantMsgId) return msg;
+                                    return {
+                                        ...msg,
+                                        text: msg.text + event.content,
+                                        isStreaming: true
+                                    };
+                                })
+                            );
+                        } else if (event.type === 'done') {
+                            setMessages(prev =>
+                                prev.map(msg => {
+                                    if (msg.id !== assistantMsgId) return msg;
+                                    return {
+                                        ...msg,
+                                        text: event.answer || msg.text,
+                                        analysis: event.analysis || msg.analysis,
+                                        citations: event.citations || msg.citations,
+                                        steps: event.steps || msg.steps,
+                                        isStreaming: false
+                                    };
+                                })
+                            );
+
+                            if (event.chat_id) {
+                                setActiveChatId(event.chat_id);
+                            }
+                            fetchChats();
+                        } else if (event.type === 'error') {
+                            throw new Error(event.detail || 'Lỗi xử lý luồng stream');
+                        }
+                    } catch (parseErr) {
+                        console.warn('Error parsing SSE event chunk:', parseErr);
+                    }
+                }
             }
-
-            // Refresh chat list from MongoDB
-            fetchChats();
         } catch (err: any) {
-            console.error('Error in chat request:', err);
-            const errorMsg: Message = {
-                id: String(Date.now() + 1),
-                sender: 'assistant',
-                text: `⚠️ **Không thể hoàn tất tra cứu**: ${err.message || 'Lỗi kết nối máy chủ hoặc API'}. Vui lòng kiểm tra lại cấu hình hệ thống.`,
-                timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            };
-            setMessages(prev => [...prev, errorMsg]);
+            console.error('Error in chat stream request:', err);
+            setMessages(prev =>
+                prev.map(msg => {
+                    if (msg.id !== assistantMsgId) return msg;
+                    return {
+                        ...msg,
+                        text: msg.text
+                            ? `${msg.text}\n\n⚠️ *Ngắt kết nối luồng: ${err.message}*`
+                            : `⚠️ **Không thể hoàn tất tra cứu**: ${err.message || 'Lỗi kết nối máy chủ hoặc API'}. Vui lòng kiểm tra lại cấu hình.`,
+                        isStreaming: false
+                    };
+                })
+            );
         } finally {
             setIsLoading(false);
         }
@@ -382,7 +488,7 @@ export const ChatPage: React.FC = () => {
             </header>
 
             <main className="relative z-10 flex-1 flex flex-col h-full bg-white overflow-hidden">
-                <div className="flex-1 overflow-y-auto px-4 z-20 flex flex-col justify-between">
+                <div className="flex-1 overflow-y-auto z-20 flex flex-col justify-between">
                     {messages.length === 0 ? (
                         <div className="flex-1 flex flex-col items-center justify-center my-auto">
                             <div className="max-w-2xl w-full text-center space-y-5">
@@ -418,14 +524,24 @@ export const ChatPage: React.FC = () => {
                                                     <span>Mốc: {msg.targetDate}</span>
                                                 )}
                                             </div>
-                                            <p className="text-sm sm:text-base leading-relaxed whitespace-pre-wrap bg-indigo-100 px-4 py-3 rounded-2xl">
+                                            <p className="text-sm sm:text-base leading-relaxed whitespace-pre-wrap bg-slate-200 px-4 py-3 rounded-2xl">
                                                 {msg.text}
                                             </p>
                                         </div>
                                     ) : (
-                                        <div className="max-w-4xl w-full py-5 space-y-4">
-                                            {/* Reasoning & Citations Header Bar */}
-                                            {msg.citations && msg.citations.length > 0 && (
+                                        <div className="max-w-4xl py-4 space-y-4">
+                                            {/* Reasoning / Thinking Process Step-by-Step */}
+                                            {(msg.analysis || (msg.steps && msg.steps.length > 0) || msg.isStreaming) && (
+                                                <ReasoningProcess
+                                                    analysis={msg.analysis}
+                                                    steps={msg.steps}
+                                                    citationsCount={msg.citations?.length || 0}
+                                                    isStreaming={msg.isStreaming}
+                                                />
+                                            )}
+
+                                            {/* Citations Header Bar */}
+                                            {/* {msg.citations && msg.citations.length > 0 && (
                                                 <div className="space-y-2">
                                                     <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 uppercase tracking-wide">
                                                         <CheckCircle2 className="w-4 h-4 text-emerald-600" />
@@ -436,14 +552,14 @@ export const ChatPage: React.FC = () => {
                                                             <button
                                                                 key={idx}
                                                                 onClick={() => setSelectedCitation(cit)}
-                                                                className="inline-flex items-center gap-1 px-2.5 py-1 hover:border-indigo-400 hover:bg-indigo-50/50 text-xs text-slate-700 hover:text-indigo-700 transition-colors cursor-pointer"
+                                                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:border-indigo-400 hover:bg-indigo-50/50 text-xs text-slate-700 hover:text-indigo-700 transition-colors shadow-2xs cursor-pointer"
                                                             >
-                                                                <FileText className="w-3 h-3 text-indigo-600" />
+                                                                <FileText className="w-3.5 h-3.5 text-indigo-600" />
                                                                 <span className="font-medium truncate max-w-[200px]">
                                                                     {cit.document_title}
                                                                 </span>
                                                                 {cit.effect_status_name && (
-                                                                    <span className="text-[10px] px-1 py-0.2 rounded bg-emerald-100/70 text-emerald-800 font-medium">
+                                                                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100/70 text-emerald-800 font-medium">
                                                                         {cit.effect_status_name}
                                                                     </span>
                                                                 )}
@@ -451,11 +567,23 @@ export const ChatPage: React.FC = () => {
                                                         ))}
                                                     </div>
                                                 </div>
-                                            )}
+                                            )} */}
 
-                                            {/* Answer Body (Markdown) */}
+                                            {/* Answer Body (Markdown with Live Token Streaming) */}
                                             <div className="text-sm sm:text-base leading-relaxed text-slate-900">
-                                                <MarkdownRenderer content={msg.text} />
+                                                {msg.text ? (
+                                                    <div>
+                                                        <MarkdownRenderer content={msg.text} />
+                                                        {msg.isStreaming && (
+                                                            <span className="inline-block w-1.5 h-4 ml-1 bg-indigo-600 animate-pulse align-middle" />
+                                                        )}
+                                                    </div>
+                                                ) : msg.isStreaming ? (
+                                                    <div className="flex items-center gap-2 text-xs text-slate-500 italic py-1">
+                                                        <Loader2 className="w-3.5 h-3.5 text-indigo-600 animate-spin" />
+                                                        <span>Đang tổng hợp câu trả lời theo thời gian thực...</span>
+                                                    </div>
+                                                ) : null}
                                             </div>
 
                                             <div className="flex items-center justify-between pt-2 border-t border-slate-200/50 text-[11px] text-slate-400">
@@ -465,23 +593,6 @@ export const ChatPage: React.FC = () => {
                                     )}
                                 </div>
                             ))}
-
-                            {/* Thinking / Loading indicator */}
-                            {isLoading && (
-                                <div className="flex flex-col items-start">
-                                    <div className="bg-slate-50 border border-slate-200/80 rounded-2xl rounded-tl-sm p-4 shadow-xs space-y-2.5 max-w-md">
-                                        <div className="flex items-center gap-2 text-sm text-slate-700 font-medium">
-                                            <Loader2 className="w-4 h-4 text-indigo-600 animate-spin" />
-                                            <span>Evidentia. đang phân tích và tra cứu...</span>
-                                        </div>
-                                        <div className="space-y-1 text-xs text-slate-500 pl-6">
-                                            <p>• Phân tích câu hỏi & ràng buộc mốc thời gian</p>
-                                            <p>• Hybrid Retrieval (BM25 + Dense) trên Qdrant Cloud</p>
-                                            <p>• Kiểm chứng căn cứ pháp lý với Gemini Flash Lite</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
 
                             <div ref={messagesEndRef} />
                         </div>

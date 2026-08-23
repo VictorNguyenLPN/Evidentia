@@ -123,6 +123,82 @@ Hãy trả lời câu hỏi của người dùng theo đúng các quy tắc trê
 
         return self.llm.generate(prompt=prompt, system_instruction=system_instruction, temperature=0.2)
 
+    def generate_grounded_answer_stream(
+        self,
+        user_query: str,
+        retrieved_chunks: List[Dict[str, Any]],
+        analysis: Dict[str, Any]
+    ):
+        """
+        Step 3 Stream: Synthesize grounded response tokens with Gemini.
+        """
+        if not retrieved_chunks:
+            target_date_str = analysis.get('target_date')
+            time_suffix = f" tại mốc thời gian {target_date_str}" if target_date_str else ""
+            fallback = (
+                "⚠️ **Không tìm thấy căn cứ pháp lý phù hợp trong cơ sở dữ liệu** "
+                f"với từ khóa tìm kiếm *\"{analysis.get('search_query', user_query)}\"*{time_suffix}.\n\n"
+                "Vui lòng kiểm tra lại mốc thời gian hoặc mở rộng phạm vi câu hỏi."
+            )
+            yield fallback
+            return
+
+        context_blocks = []
+        for idx, chunk in enumerate(retrieved_chunks, start=1):
+            doc_title = chunk.get("document_title", "Văn bản quy phạm")
+            doc_identity = chunk.get("doc_identity", "")
+            hierarchy = " > ".join(chunk.get("hierarchy_path", []))
+            issue_date = chunk.get("issue_date", "Chưa rõ")
+            effect_date = chunk.get("effect_date", "Chưa rõ")
+            expire_date = chunk.get("expire_date") or "Đang cập nhật / Không xác định"
+            effect_status = chunk.get("effect_status_name", "Chưa xác định")
+            lead_in = chunk.get("lead_in_text") or ""
+            text = chunk.get("text", "")
+
+            block = (
+                f"--- [TÀI LIỆU {idx}] ---\n"
+                f"Văn bản: {doc_title} (Số hiệu: {doc_identity})\n"
+                f"Phân cấp: {hierarchy}\n"
+                f"Ngày ban hành: {issue_date} | Ngày có hiệu lực: {effect_date} | Ngày hết hiệu lực: {expire_date}\n"
+                f"Trạng thái hiệu lực: {effect_status}\n"
+                f"Nội dung điều khoản:\n{lead_in} {text}\n"
+            )
+            context_blocks.append(block)
+
+        context_str = "\n".join(context_blocks)
+
+        system_instruction = """
+Bạn là Trợ lý Pháp lý Thông minh Evidentia (Agentic Legal Assistant).
+Nhiệm vụ: Trả lời câu hỏi của người dùng một cách chuyên nghiệp, chính xác, có cơ sở pháp lý vững chắc dựa trên các tài liệu được cung cấp.
+
+Quy tắc bắt buộc:
+1. TRUNG THỰC VÀ GROUNDED: Chỉ đưa ra kết luận dựa trên các tài liệu đã cung cấp. Không bịa đặt điều luật hay số hiệu văn bản.
+2. DẪN CHỨNG RÕ RÀNG: Luôn ghi rõ trích dẫn (ví dụ: *Khoản 1 Điều 2 Bộ luật Lao động số 45/2019/QH14*).
+3. ĐÁNH GIÁ HIỆU LỰC: Nêu rõ tình trạng hiệu lực của văn bản/điều khoản được áp dụng.
+4. CẤU TRÚC RÕ RÀNG:
+   - **Kết luận / Tóm tắt câu trả lời**
+   - **Căn cứ pháp lý chi tiết** (phân tích từng điều khoản liên quan)
+   - **Lưu ý về hiệu lực thời gian & Áp dụng thực tế**
+""".strip()
+
+        target_date_info = f"Mốc thời gian tra cứu: {analysis.get('target_date')}" if analysis.get('target_date') else "Mốc thời gian tra cứu: Thời điểm hiện tại"
+
+        prompt = f"""
+CÂU HỎI NGƯỜI DÙNG:
+"{user_query}"
+
+{target_date_info}
+Lĩnh vực: {analysis.get('domain', 'Pháp luật')}
+
+NGỮ CẢNH VĂN BẢN PHÁP LUẬT ĐÃ TRUY XUẤT ĐƯỢC:
+{context_str}
+
+Hãy trả lời câu hỏi của người dùng theo đúng các quy tắc trên.
+""".strip()
+
+        for token in self.llm.generate_stream(prompt=prompt, system_instruction=system_instruction, temperature=0.2):
+            yield token
+
     def run(
         self,
         query: str,
@@ -148,7 +224,8 @@ Hãy trả lời câu hỏi của người dùng theo đúng các quy tắc trê
             "search_query": search_query,
             "target_date": resolved_date,
             "domain": analysis.get("domain"),
-            "intent": analysis.get("intent")
+            "intent": analysis.get("intent"),
+            "reasoning": analysis.get("reasoning")
         }
 
         # Step 2: Hybrid Retrieval on Qdrant Cloud
@@ -221,6 +298,134 @@ Hãy trả lời câu hỏi của người dùng theo đúng các quy tắc trê
         return {
             "query": query,
             "answer": answer,
+            "analysis": analysis,
+            "citations": citations,
+            "steps": steps
+        }
+
+    def run_stream(
+        self,
+        query: str,
+        target_date: Optional[str] = None,
+        top_k: int = 5
+    ):
+        """
+        Real-Time Streaming Agentic-RAG Pipeline.
+        Yields step events (start/complete), token chunks, and final payload via SSE format.
+        """
+        steps = []
+
+        # Step 1: Query & Intent Analysis
+        step1_msg = "Phân tích câu hỏi và mốc thời gian..."
+        steps.append({"step": "query_analysis", "status": "running", "message": step1_msg})
+        yield {"type": "step_start", "step": "query_analysis", "message": step1_msg}
+
+        analysis = self.analyze_query(user_query=query, client_date=target_date)
+        search_query = analysis.get("search_query", query)
+        resolved_date = analysis.get("target_date") or target_date
+
+        step1_details = {
+            "search_query": search_query,
+            "target_date": resolved_date,
+            "domain": analysis.get("domain"),
+            "intent": analysis.get("intent"),
+            "reasoning": analysis.get("reasoning")
+        }
+        steps[-1]["status"] = "completed"
+        steps[-1]["details"] = step1_details
+
+        yield {
+            "type": "step_complete",
+            "step": "query_analysis",
+            "message": "Đã phân tích yêu cầu và mốc thời gian",
+            "details": step1_details,
+            "analysis": analysis
+        }
+
+        # Step 2: Hybrid Retrieval on Qdrant Cloud
+        step2_msg = "Tìm kiếm Hybrid (BM25 + Dense) trên Qdrant Cloud..."
+        steps.append({"step": "hybrid_retrieval", "status": "running", "message": step2_msg})
+        yield {"type": "step_start", "step": "hybrid_retrieval", "message": step2_msg}
+
+        retrieved_chunks = self.retriever.search(
+            query=search_query,
+            target_date=resolved_date,
+            top_k=top_k
+        )
+
+        # Fallback: if no chunks found with strict temporal filter, try search without filter
+        if not retrieved_chunks and resolved_date:
+            logger.info("No chunks found with strict temporal filter. Retrying broad search...")
+            retrieved_chunks = self.retriever.search(
+                query=search_query,
+                target_date=None,
+                top_k=top_k
+            )
+
+        citations = []
+        for c in retrieved_chunks:
+            citations.append({
+                "chunk_id": c.get("chunk_id"),
+                "document_title": c.get("document_title"),
+                "doc_identity": c.get("doc_identity"),
+                "article_number": c.get("article_number"),
+                "article_title": c.get("article_title"),
+                "clause_number": c.get("clause_number"),
+                "point": c.get("point"),
+                "issue_date": c.get("issue_date"),
+                "effect_date": c.get("effect_date"),
+                "expire_date": c.get("expire_date"),
+                "effect_status_name": c.get("effect_status_name"),
+                "hierarchy_path": c.get("hierarchy_path", []),
+                "text": c.get("text", ""),
+                "score": c.get("score", 0.0),
+                "vbpl_url": c.get("vbpl_url")
+            })
+
+        step2_details = {
+            "num_retrieved": len(retrieved_chunks),
+            "top_sources": [
+                f"{c.get('document_title')} - {c.get('article_title') or 'Điều khoản'}"
+                for c in retrieved_chunks[:3]
+            ]
+        }
+        steps[-1]["status"] = "completed"
+        steps[-1]["details"] = step2_details
+
+        yield {
+            "type": "step_complete",
+            "step": "hybrid_retrieval",
+            "message": f"Đã tìm thấy {len(retrieved_chunks)} căn cứ pháp lý phù hợp",
+            "details": step2_details,
+            "citations": citations
+        }
+
+        # Step 3: Answer Generation & Citations Grounding (Stream tokens)
+        step3_msg = "Kiểm chứng trích dẫn và tổng hợp câu trả lời..."
+        steps.append({"step": "answer_synthesis", "status": "running", "message": step3_msg})
+        yield {"type": "step_start", "step": "answer_synthesis", "message": step3_msg}
+
+        full_answer = ""
+        for token in self.generate_grounded_answer_stream(
+            user_query=query,
+            retrieved_chunks=retrieved_chunks,
+            analysis=analysis
+        ):
+            full_answer += token
+            yield {"type": "token", "content": token}
+
+        steps[-1]["status"] = "completed"
+        yield {
+            "type": "step_complete",
+            "step": "answer_synthesis",
+            "message": "Hoàn tất tổng hợp câu trả lời"
+        }
+
+        # Final payload
+        yield {
+            "type": "done",
+            "query": query,
+            "answer": full_answer,
             "analysis": analysis,
             "citations": citations,
             "steps": steps
