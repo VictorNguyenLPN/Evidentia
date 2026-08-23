@@ -12,7 +12,7 @@ import {
     X,
     MoreVertical,
 } from 'lucide-react';
-import Button from '../components/button';
+import Button from '../components/Button';
 import { useChat } from '../contexts/ChatContext';
 
 interface LawChapterSummary {

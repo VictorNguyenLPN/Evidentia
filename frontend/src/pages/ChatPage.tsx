@@ -14,7 +14,7 @@ import {
     Sparkles,
 } from 'lucide-react';
 import MarkdownRenderer from '../components/MarkdownRenderer';
-import Button from '../components/button';
+import Button from '../components/Button';
 import ReasoningProcess, { type PipelineStep, type QueryAnalysis } from '../components/ReasoningProcess';
 import { useChat, type ChatSession } from '../contexts/ChatContext';
 
@@ -515,7 +515,7 @@ export const ChatPage: React.FC = () => {
                             {messages.map((msg) => (
                                 <div
                                     key={msg.id}
-                                    className={`flex flex-col ${msg.sender === 'user' ? 'items-end' : 'items-start'}`}
+                                    className={`w-full flex flex-col ${msg.sender === 'user' ? 'items-end' : 'items-start'}`}
                                 >
                                     {msg.sender === 'user' ? (
                                         <div className="max-w-2xl text-black">
@@ -571,23 +571,14 @@ export const ChatPage: React.FC = () => {
 
                                             {/* Answer Body (Markdown with Live Token Streaming) */}
                                             <div className="text-sm sm:text-base leading-relaxed text-slate-900">
-                                                {msg.text ? (
+                                                {msg.text && (
                                                     <div>
                                                         <MarkdownRenderer content={msg.text} />
                                                         {msg.isStreaming && (
                                                             <span className="inline-block w-1.5 h-4 ml-1 bg-indigo-600 animate-pulse align-middle" />
                                                         )}
                                                     </div>
-                                                ) : msg.isStreaming ? (
-                                                    <div className="flex items-center gap-2 text-xs text-slate-500 italic py-1">
-                                                        <Loader2 className="w-3.5 h-3.5 text-indigo-600 animate-spin" />
-                                                        <span>Đang tổng hợp câu trả lời theo thời gian thực...</span>
-                                                    </div>
-                                                ) : null}
-                                            </div>
-
-                                            <div className="flex items-center justify-between pt-2 border-t border-slate-200/50 text-[11px] text-slate-400">
-                                                <span>Evidentia. - Hệ thống trợ lý pháp lý đa tác tử thông minh</span>
+                                                )}
                                             </div>
                                         </div>
                                     )}
@@ -621,7 +612,7 @@ export const ChatPage: React.FC = () => {
                             </div>
                         )}
 
-                        <div className="flex flex-col rounded-2xl bg-white border border-slate-300 focus-within:border-indigo-600 focus-within:ring-3 focus-within:ring-indigo-100 shadow-lg shadow-slate-200/50 p-3">
+                        <div className="flex flex-col rounded-2xl bg-white border border-slate-300 focus-within:ring-3 focus-within:ring-indigo-100 shadow-lg shadow-slate-200/50 p-3">
                             <textarea
                                 ref={textareaRef}
                                 value={inputPrompt}
@@ -629,7 +620,7 @@ export const ChatPage: React.FC = () => {
                                 onKeyDown={handleKeyDown}
                                 rows={1}
                                 placeholder="Mô tả câu hỏi hoặc yêu cầu tra cứu pháp luật theo thời điểm..."
-                                className="w-full bg-transparent text-slate-900 text-sm sm:text-base px-1.5 py-1 focus:outline-none resize-none font-sans min-h-[40px] max-h-56 overflow-y-auto"
+                                className="w-full bg-transparent text-slate-900 text-sm sm:text-base px-1.5 py-1 focus:outline-none resize-none font-sans min-h-10 max-h-56 overflow-y-auto"
                             />
 
                             <div className="flex items-center justify-between pt-2.5 mt-1 border-t border-slate-100">
