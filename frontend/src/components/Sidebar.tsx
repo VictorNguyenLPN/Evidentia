@@ -19,8 +19,8 @@ import {
     ChevronDown,
     X,
 } from 'lucide-react';
-import Button from './button';
-import ScrollableText from './scrollable-text';
+import Button from './Button';
+import ScrollableText from './AutoScrollText';
 
 export interface ChatSession {
     id: string;
@@ -228,7 +228,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         className="fixed inset-0"
                         onClick={() => setIsSearchOpen(false)}
                     />
-                    <div className="relative z-10 w-full max-w-lg bg-white rounded-2xl border border-slate-200 shadow-2xl overflow-hidden flex flex-col max-h-[70vh]">
+                    <div className="relative z-10 w-full max-w-2xl bg-white rounded-2xl border border-slate-200 shadow-2xl overflow-hidden flex flex-col max-h-[70vh]">
                         {/* Search Input Bar */}
                         <div className="flex items-center px-4 border-b border-slate-200 bg-white">
                             <Search className="w-5 h-5 text-slate-400 shrink-0 mr-3" />
@@ -244,7 +244,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                     }
                                 }}
                                 placeholder="Tìm kiếm đoạn chat..."
-                                className="w-full py-4 text-sm bg-transparent text-slate-800 placeholder-slate-400 focus:outline-none"
+                                className="w-full py-4 text-sm bg-transparent text-slate-800 focus:outline-none"
                             />
                             {searchQuery && (
                                 <button
@@ -714,7 +714,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     </div>
                 </div>
 
-                <div className="h-[68px] p-2.5 flex items-center relative shrink-0 border-t border-slate-200">
+                <div className="h-17 p-2.5 flex items-center relative shrink-0 border-t border-slate-200">
                     {isProfileMenuOpen && (
                         <>
                             <div

@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(
-    name="evidentia",
+    name="evidentia.",
     version="0.0.0",
     description="Agentic System for Temporal Retrieval and Verification of Vietnamese Legal Information",
     packages=find_packages(include=['backend']),

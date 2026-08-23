@@ -18,7 +18,7 @@ export const NotFoundPage: React.FC = () => {
                 <Link to="/" className="flex flex-col items-start">
                     <div className="flex items-center gap-1.5">
                         <span className="text-xl font-bold tracking-tight text-slate-900">
-                            Evidentia<span className="text-indigo-600">.</span>
+                            <span className="text-indigo-600">Evidentia.</span>
                         </span>
                     </div>
                     <p className="text-[11px] text-slate-500 font-medium tracking-wide">Hệ thống trợ lý pháp lý đa tác tử thông minh</p>

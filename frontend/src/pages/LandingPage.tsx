@@ -14,7 +14,7 @@ export const LandingPage: React.FC = () => {
         <Link to="/" className="flex flex-col items-start">
           <div className="flex items-center gap-1.5">
             <span className="text-xl font-bold tracking-tight text-slate-900">
-              Evidentia<span className="text-indigo-600">.</span>
+              <span className="text-indigo-600">Evidentia.</span>
             </span>
           </div>
           <p className="text-[11px] text-slate-500 font-medium tracking-wide">Hệ thống trợ lý pháp lý đa tác tử thông minh</p>
@@ -24,7 +24,7 @@ export const LandingPage: React.FC = () => {
         <div className="flex items-center gap-3">
           <Link
             to="/laws"
-            className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 text-xs font-medium"
+            className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-2 hover:bg-slate-50 text-slate-700 hover:text-slate-900 text-xs font-medium"
           >
             <BookOpen className="w-3.5 h-3.5 text-slate-500" />
             <span>Thư viện văn bản</span>
@@ -63,19 +63,20 @@ export const LandingPage: React.FC = () => {
         {/* Center Hero Actions */}
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
           <Link
+            to="/laws"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl hover:bg-slate-50 text-slate-700 hover:text-slate-900 text-xs sm:text-sm font-medium"
+          >
+            <BookOpen className="w-4 h-4 text-slate-500" />
+            <span>Thư viện văn bản</span>
+          </Link>
+          <Link
             to="/chats"
             className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs sm:text-sm font-semibold shadow-md shadow-indigo-600/20"
           >
             <span>Bắt đầu hỏi đáp</span>
             <ArrowRight className="w-4 h-4" />
           </Link>
-          <Link
-            to="/laws"
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 text-xs sm:text-sm font-medium border border-slate-200/90 shadow-xs"
-          >
-            <BookOpen className="w-4 h-4 text-slate-500" />
-            <span>Thư viện văn bản</span>
-          </Link>
+
         </div>
       </main>
 

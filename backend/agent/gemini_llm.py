@@ -80,9 +80,42 @@ class GeminiLLMClient:
                 contents=prompt,
                 config=config if config else None
             )
+
+            # print(response.text.strip())
+
             return response.text.strip()
         except Exception as e:
             logger.error(f"Error invoking Gemini model ({self.model_name}): {e}", exc_info=True)
+            raise e
+
+    def generate_stream(
+        self,
+        prompt: str,
+        system_instruction: Optional[str] = None,
+        temperature: float = 0.2
+    ):
+        """
+        Generate streaming token chunks from Gemini model.
+        """
+        client = self.get_client()
+        try:
+            config = {}
+            if system_instruction:
+                config["system_instruction"] = system_instruction
+            if temperature is not None:
+                config["temperature"] = temperature
+
+            response = client.models.generate_content_stream(
+                model=self.model_name,
+                contents=prompt,
+                config=config if config else None
+            )
+
+            for chunk in response:
+                if chunk.text:
+                    yield chunk.text
+        except Exception as e:
+            logger.error(f"Error streaming from Gemini model ({self.model_name}): {e}", exc_info=True)
             raise e
 
     def generate_json(
