@@ -19,8 +19,8 @@ import {
     ChevronDown,
     X,
 } from 'lucide-react';
-import Button from './button';
-import ScrollableText from './scrollable-text';
+import Button from './Button';
+import ScrollableText from './AutoScrollText';
 
 export interface ChatSession {
     id: string;
