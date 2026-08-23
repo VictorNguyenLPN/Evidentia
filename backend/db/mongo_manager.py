@@ -118,22 +118,11 @@ class MongoManager:
             try:
                 updated = datetime.fromisoformat(updated)
             except Exception:
-                return "Vừa xong"
+                return datetime.now().strftime("%H:%M - %d/%m/%Y")
 
         if isinstance(updated, datetime):
-            now = datetime.now()
-            diff = now - updated
-            if diff.days == 0:
-                if diff.seconds < 3600:
-                    mins = max(1, diff.seconds // 60)
-                    return f"{mins} phút trước"
-                else:
-                    return updated.strftime("%H:%M")
-            elif diff.days == 1:
-                return "Hôm qua"
-            else:
-                return f"{diff.days} ngày trước"
-        return "Vừa xong"
+            return updated.strftime("%H:%M - %d/%m/%Y")
+        return datetime.now().strftime("%H:%M - %d/%m/%Y")
 
     def get_all_chats(self) -> List[Dict[str, Any]]:
         """
@@ -154,12 +143,16 @@ class MongoManager:
                 
                 chats = []
                 for doc in cursor:
+                    created = doc.get("created_at")
+                    updated = doc.get("updated_at")
                     chats.append({
                         "id": doc.get("id"),
                         "title": doc.get("title", "Đoạn chat mới"),
                         "tag": doc.get("tag", "Pháp luật"),
                         "isPinned": bool(doc.get("is_pinned", False)),
-                        "time": self._format_relative_time(doc.get("updated_at"))
+                        "time": self._format_relative_time(updated or created),
+                        "created_at": created.isoformat() if isinstance(created, datetime) else created,
+                        "updated_at": updated.isoformat() if isinstance(updated, datetime) else updated,
                     })
                 return chats
             except Exception as e:
@@ -177,7 +170,9 @@ class MongoManager:
                 "title": doc.get("title", "Đoạn chat mới"),
                 "tag": doc.get("tag", "Pháp luật"),
                 "isPinned": bool(doc.get("is_pinned", False)),
-                "time": self._format_relative_time(doc.get("updated_at"))
+                "time": self._format_relative_time(doc.get("updated_at") or doc.get("created_at")),
+                "created_at": doc.get("created_at").isoformat() if isinstance(doc.get("created_at"), datetime) else doc.get("created_at"),
+                "updated_at": doc.get("updated_at").isoformat() if isinstance(doc.get("updated_at"), datetime) else doc.get("updated_at"),
             }
             for doc in sorted_fallback
         ]

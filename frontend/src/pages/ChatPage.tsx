@@ -12,7 +12,7 @@ import {
     Loader2,
     Search,
 } from 'lucide-react';
-import ReactMarkdown from 'react-markdown';
+import MarkdownRenderer from '../components/MarkdownRenderer';
 import Button from '../components/button';
 import { useChat, type ChatSession } from '../contexts/ChatContext';
 
@@ -454,8 +454,8 @@ export const ChatPage: React.FC = () => {
                                             )}
 
                                             {/* Answer Body (Markdown) */}
-                                            <div className="prose prose-slate max-w-none text-sm sm:text-base leading-8 space-y-4 text-slate-900">
-                                                <ReactMarkdown>{msg.text}</ReactMarkdown>
+                                            <div className="text-sm sm:text-base leading-relaxed text-slate-900">
+                                                <MarkdownRenderer content={msg.text} />
                                             </div>
 
                                             <div className="flex items-center justify-between pt-2 border-t border-slate-200/50 text-[11px] text-slate-400">

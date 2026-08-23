@@ -80,6 +80,9 @@ class GeminiLLMClient:
                 contents=prompt,
                 config=config if config else None
             )
+
+            print(response.text.strip())
+
             return response.text.strip()
         except Exception as e:
             logger.error(f"Error invoking Gemini model ({self.model_name}): {e}", exc_info=True)

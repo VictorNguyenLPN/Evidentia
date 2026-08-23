@@ -228,7 +228,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         className="fixed inset-0"
                         onClick={() => setIsSearchOpen(false)}
                     />
-                    <div className="relative z-10 w-full max-w-lg bg-white rounded-2xl border border-slate-200 shadow-2xl overflow-hidden flex flex-col max-h-[70vh]">
+                    <div className="relative z-10 w-full max-w-2xl bg-white rounded-2xl border border-slate-200 shadow-2xl overflow-hidden flex flex-col max-h-[70vh]">
                         {/* Search Input Bar */}
                         <div className="flex items-center px-4 border-b border-slate-200 bg-white">
                             <Search className="w-5 h-5 text-slate-400 shrink-0 mr-3" />
