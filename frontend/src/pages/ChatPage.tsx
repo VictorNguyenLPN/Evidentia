@@ -42,6 +42,7 @@ interface Message {
     citations?: Citation[];
     steps?: PipelineStep[];
     isStreaming?: boolean;
+    duration?: number;
 }
 
 const CURRENT_USER_EMAIL = 'huy.nguyen@evidentia.vn';
@@ -235,6 +236,7 @@ export const ChatPage: React.FC = () => {
         setMessages(prev => [...prev, userMsg, initialAssistantMsg]);
         setInputPrompt('');
         setIsLoading(true);
+        const requestStartTime = Date.now();
 
         try {
             const res = await fetch('/api/chat/stream', {
@@ -243,7 +245,7 @@ export const ChatPage: React.FC = () => {
                 body: JSON.stringify({
                     query: queryText,
                     target_date: targetDate || undefined,
-                    top_k: 5,
+                    top_k: 10,
                     chat_id: currentChatId,
                 }),
             });
@@ -340,6 +342,7 @@ export const ChatPage: React.FC = () => {
                                 })
                             );
                         } else if (event.type === 'done') {
+                            const finalDuration = +((Date.now() - requestStartTime) / 1000).toFixed(1);
                             setMessages(prev =>
                                 prev.map(msg => {
                                     if (msg.id !== assistantMsgId) return msg;
@@ -349,7 +352,8 @@ export const ChatPage: React.FC = () => {
                                         analysis: event.analysis || msg.analysis,
                                         citations: event.citations || msg.citations,
                                         steps: event.steps || msg.steps,
-                                        isStreaming: false
+                                        isStreaming: false,
+                                        duration: finalDuration
                                     };
                                 })
                             );
@@ -537,6 +541,7 @@ export const ChatPage: React.FC = () => {
                                                     steps={msg.steps}
                                                     citationsCount={msg.citations?.length || 0}
                                                     isStreaming={msg.isStreaming}
+                                                    duration={msg.duration}
                                                 />
                                             )}
 
