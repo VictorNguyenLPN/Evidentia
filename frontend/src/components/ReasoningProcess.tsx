@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
     CheckCircle2,
     Loader2,
@@ -7,16 +7,23 @@ import {
 
 export interface PipelineStep {
     step: string;
-    status: string; // 'running' | 'completed'
+    status: string; // 'running' | 'completed' | 'error'
     message: string;
+    title?: string;
+    step_type?: string; // 'tool_call' | 'direct_answer' | 'synthesis' | 'reflection'
+    tool?: string;
+    tool_args?: Record<string, any>;
     details?: {
+        thought?: string;
+        reasoning?: string;
         search_query?: string;
         target_date?: string;
         domain?: string;
         intent?: string;
-        reasoning?: string;
         num_retrieved?: number;
         top_sources?: string[];
+        document_title?: string;
+        article_title?: string;
         [key: string]: any;
     };
 }
@@ -35,39 +42,23 @@ interface ReasoningProcessProps {
     citationsCount?: number;
     defaultExpanded?: boolean;
     isStreaming?: boolean;
+    duration?: number;
     className?: string;
 }
-
-const getIntentLabel = (intent?: string): string => {
-    switch (intent) {
-        case 'search':
-            return 'Tra cứu quy định';
-        case 'compare':
-            return 'So sánh & Đối chiếu';
-        case 'temporal_update':
-            return 'Kiểm tra mốc hiệu lực';
-        default:
-            return intent || 'Tra cứu pháp lý';
-    }
-};
 
 export const ReasoningProcess: React.FC<ReasoningProcessProps> = ({
     analysis,
     steps = [],
     citationsCount = 0,
-    defaultExpanded = true,
+    defaultExpanded = false,
     isStreaming = false,
+    duration,
     className = '',
 }) => {
     const [isExpanded, setIsExpanded] = useState<boolean>(defaultExpanded || isStreaming);
-    const [elapsedSeconds, setElapsedSeconds] = useState<number>(0);
-    const [hasUserToggled, setHasUserToggled] = useState<boolean>(false);
-
-    const [openSubSteps, setOpenSubSteps] = useState<Record<string, boolean>>({
-        step1: true,
-        step2: true,
-        step3: true,
-    });
+    const [elapsedSeconds, setElapsedSeconds] = useState<number>(duration || 0);
+    const [openStepIds, setOpenStepIds] = useState<Record<string, boolean>>({});
+    const prevStreamingRef = useRef<boolean>(isStreaming);
 
     useEffect(() => {
         if (!isStreaming) return;
@@ -80,182 +71,135 @@ export const ReasoningProcess: React.FC<ReasoningProcessProps> = ({
     }, [isStreaming]);
 
     useEffect(() => {
-        if (isStreaming && !hasUserToggled) {
+        if (isStreaming) {
             setIsExpanded(true);
+        } else if (prevStreamingRef.current && !isStreaming) {
+            setIsExpanded(false);
         }
-    }, [isStreaming, hasUserToggled]);
+        prevStreamingRef.current = isStreaming;
+    }, [isStreaming]);
 
-    const toggleSubStep = (stepKey: string, e: React.MouseEvent) => {
+    const isStepOpen = (stepKey: string): boolean => {
+        return openStepIds[stepKey] !== undefined ? openStepIds[stepKey] : false;
+    };
+
+    const toggleStep = (stepKey: string, e: React.MouseEvent) => {
         e.stopPropagation();
-        setOpenSubSteps(prev => ({
+        setOpenStepIds(prev => ({
             ...prev,
-            [stepKey]: !prev[stepKey]
+            [stepKey]: !isStepOpen(stepKey)
         }));
     };
 
-    const step1 = steps.find((s) => s.step === 'query_analysis');
-    const step2 = steps.find((s) => s.step === 'hybrid_retrieval');
-    const step3 = steps.find((s) => s.step === 'answer_synthesis');
-
-    const resolvedSearchQuery = analysis?.search_query || step1?.details?.search_query;
-    const resolvedTargetDate = analysis?.target_date || step1?.details?.target_date;
-    const resolvedIntent = analysis?.intent || step1?.details?.intent;
-    const resolvedReasoning = analysis?.reasoning || step1?.details?.reasoning;
-
-    const topSources = step2?.details?.top_sources || [];
-
-    if (!isStreaming && !analysis && steps.length === 0) {
+    if (!isStreaming && (!steps || steps.length === 0) && !analysis) {
         return null;
     }
 
     const handleMasterToggle = () => {
-        setHasUserToggled(true);
         setIsExpanded((prev) => !prev);
     };
 
+    const displayDuration = elapsedSeconds > 0
+        ? elapsedSeconds
+        : (duration !== undefined && duration > 0
+            ? duration
+            : (steps.length > 0 ? +(steps.length * 1.4 + 0.6).toFixed(1) : 2.0));
+
     return (
-        <div className={`w-full mb-3.5 select-none ${className}`}>
+        <div className={`w-full mb-3.5 ${className}`}>
             <button
                 type="button"
                 onClick={handleMasterToggle}
-                className="w-full inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs hover:bg-slate-200/70 transition-colors cursor-pointer font-medium"
+                className="w-full flex items-center justify-start gap-1.5 px-2.5 py-1.5 rounded-xl text-xs hover:bg-slate-200/70 transition-colors cursor-pointer font-medium text-slate-900"
                 aria-expanded={isExpanded}
             >
                 <span>
                     {isStreaming
-                        ? `Đang thực thi (${elapsedSeconds.toFixed(1)}s)...`
-                        : `Thực thi trong ${elapsedSeconds > 0 ? `${elapsedSeconds.toFixed(1)}s` : 'vài giây'}`}
+                        ? `Agent đang suy luận (${elapsedSeconds.toFixed(1)}s)...`
+                        : `Quá trình suy luận (${steps.length > 0 ? `${steps.length} bước` : 'hoàn tất'} - ${displayDuration.toFixed(1)}s)`}
                 </span>
                 <ChevronRight
-                    className={`w-3.5 h-3.5 transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''
-                        }`}
+                    className={`w-3.5 h-3.5 transition-transform duration-200 ${
+                        isExpanded ? 'rotate-90' : ''
+                    }`}
                 />
             </button>
 
             {isExpanded && (
-                <div className="mt-1.5 ml-3 pl-1.5 border-l-2 border-slate-200/80 space-y-1.5 text-xs text-gray-900">
-                    <div className="space-y-1">
-                        <button
-                            type="button"
-                            onClick={(e) => toggleSubStep('step1', e)}
-                            className="flex items-center gap-2 px-2 py-1.5 rounded-lg text-left hover:bg-slate-200/70 transition-colors cursor-pointer w-full"
-                        >
-                            {step1?.status === 'running' ? (
-                                <Loader2 className="w-3.5 h-3.5 text-indigo-600 animate-spin shrink-0" />
-                            ) : step1?.status === 'completed' ? (
-                                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                            ) : (
-                                <span className="w-3.5 h-3.5 rounded-full border border-slate-300 flex items-center justify-center text-[9px] text-slate-500 shrink-0">1</span>
-                            )}
+                <div className="mt-1.5 ml-3 pl-2.5 border-l-2 border-slate-200/90 space-y-2 text-xs text-gray-900">
+                    {steps.map((step, idx) => {
+                        const stepKey = step.step || `step_${idx}`;
+                        const isOpen = isStepOpen(stepKey);
+                        const title = step.title || step.message || step.tool || `Bước ${idx + 1}`;
+                        const thought = step.details?.thought || step.details?.reasoning;
+                        const topSources = step.details?.top_sources || [];
+                        const searchQuery = step.tool_args?.query || step.details?.search_query;
+                        const targetDate = step.tool_args?.target_date || step.details?.target_date;
 
-                            <span className="truncate">Phân tích câu hỏi</span>
+                        return (
+                            <div key={stepKey} className="space-y-1">
+                                <button
+                                    type="button"
+                                    onClick={(e) => toggleStep(stepKey, e)}
+                                    className="flex items-center justify-start gap-2 px-2 py-1.5 rounded-lg text-left hover:bg-slate-200/70 transition-colors cursor-pointer w-full group"
+                                >
+                                    {step.status === 'running' ? (
+                                        <Loader2 className="w-3.5 h-3.5 text-indigo-600 animate-spin shrink-0" />
+                                    ) : (
+                                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                                    )}
 
-                            <ChevronRight
-                                className={`w-3 h-3 transition-transform duration-150 ${openSubSteps.step1 ? 'rotate-90' : ''
-                                    }`}
-                            />
-                        </button>
+                                    <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                                        <span className="font-medium text-slate-900 truncate text-[11.5px]">{title}</span>
+                                    </div>
 
-                        {openSubSteps.step1 && (
-                            <div className="ml-5 p-2.5 space-y-2 text-[11px] text-slate-600">
-                                {resolvedReasoning && (
-                                    <p className="italic text-slate-700 leading-relaxed">
-                                        <span className="font-semibold text-slate-900 not-italic">Suy nghĩ: </span>
-                                        "{resolvedReasoning}"
-                                    </p>
-                                )}
+                                    <ChevronRight
+                                        className={`w-3 h-3 text-slate-900 transition-transform duration-150 shrink-0 ${
+                                            isOpen ? 'rotate-90' : ''
+                                        }`}
+                                    />
+                                </button>
 
-                                {resolvedSearchQuery && (
-                                    <p className="italic text-slate-700 leading-relaxed">
-                                        <span className="font-semibold text-slate-900 not-italic">Từ khóa: </span>
-                                        "{resolvedSearchQuery}"
-                                    </p>
-                                )}
+                                {isOpen && (
+                                    <div className="ml-5.5 px-2.5 space-y-2 text-[11px] text-slate-600">
+                                        {thought && (
+                                            <p className="italic text-slate-700 leading-relaxed">
+                                                <span className="font-medium text-slate-900 not-italic">Suy nghĩ: </span>
+                                                "{thought}"
+                                            </p>
+                                        )}
 
-                                {resolvedIntent && (
-                                    <p className="italic text-slate-700 leading-relaxed">
-                                        <span className="font-semibold text-slate-900 not-italic">Ý định: </span>
-                                        {getIntentLabel(resolvedIntent)} {resolvedTargetDate ? `(Mốc: ${resolvedTargetDate})` : '(Hiện tại)'}
-                                    </p>
-                                )}
-                            </div>
-                        )}
-                    </div>
+                                        {searchQuery && (
+                                            <p className="text-slate-700">
+                                                <span className="font-medium text-slate-900">Truy vấn: </span>
+                                                <code className="bg-slate-200/60 px-1 py-0.5 rounded text-[10.5px] font-mono text-slate-800">{searchQuery}</code>
+                                                {targetDate && <span className="ml-1.5 text-slate-500">(Mốc hiệu lực: {targetDate})</span>}
+                                            </p>
+                                        )}
 
-                    <div className="space-y-1">
-                        <button
-                            type="button"
-                            onClick={(e) => toggleSubStep('step2', e)}
-                            className="flex items-center gap-2 px-2 py-1.5 rounded-lg text-left hover:bg-slate-200/70 transition-colors cursor-pointer w-full"
-                        >
-                            {step2?.status === 'running' ? (
-                                <Loader2 className="w-3.5 h-3.5 text-indigo-600 animate-spin shrink-0" />
-                            ) : step2?.status === 'completed' ? (
-                                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                            ) : (
-                                <span className="w-3.5 h-3.5 rounded-full border border-slate-300 flex items-center justify-center text-[9px] shrink-0">2</span>
-                            )}
-
-                            <span className="truncate">Truy xuất thông tin từ Vector Database</span>
-
-                            <ChevronRight
-                                className={`w-3 h-3 transition-transform duration-150 ${openSubSteps.step2 ? 'rotate-90' : ''
-                                    }`}
-                            />
-                        </button>
-
-                        {openSubSteps.step2 && (
-                            <div className="ml-5 p-2.5 space-y-2 text-[11px] text-slate-600">
-                                {topSources.length > 0 && (
-                                    <div className="space-y-1 pt-1">
-                                        <div className="font-semibold text-slate-900 not-italic">
-                                            Top văn bản khớp nhất:
-                                        </div>
-                                        {topSources.map((src, i) => (
-                                            <div
-                                                key={i}
-                                                className="flex items-center gap-1.5 px-2 py-1 text-slate-700 truncate"
-                                            >
-                                                {i + 1}. 
-                                                <span className="truncate">{src}</span>
+                                        {topSources.length > 0 && (
+                                            <div className="space-y-1 pt-0.5">
+                                                <div className="text-slate-900 font-medium">
+                                                    Căn cứ pháp lý tìm thấy ({topSources.length}):
+                                                </div>
+                                                <div className="space-y-1 pl-1">
+                                                    {topSources.map((src, i) => (
+                                                        <div
+                                                            key={i}
+                                                            className="flex items-center gap-1.5 text-slate-700 text-[10.5px] truncate"
+                                                        >
+                                                            <span className="text-slate-400">•</span>
+                                                            <span className="truncate">{src}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
                                             </div>
-                                        ))}
+                                        )}
                                     </div>
                                 )}
                             </div>
-                        )}
-                    </div>
-
-                    <div className="space-y-1">
-                        <button
-                            type="button"
-                            onClick={(e) => toggleSubStep('step3', e)}
-                            className="flex items-center gap-2 px-2 py-1.5 rounded-lg text-left hover:bg-slate-200/70 transition-colors cursor-pointer w-full"
-                        >
-                            {step3?.status === 'running' ? (
-                                <Loader2 className="w-3.5 h-3.5 text-indigo-600 animate-spin shrink-0" />
-                            ) : step3?.status === 'completed' ? (
-                                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                            ) : (
-                                <span className="w-3.5 h-3.5 rounded-full border border-slate-300 flex items-center justify-center text-[9px] shrink-0">3</span>
-                            )}
-
-                            <span className="truncate">Kiểm chứng & Tổng hợp câu trả lời</span>
-
-                            <ChevronRight
-                                className={`w-3 h-3 transition-transform duration-150 ${openSubSteps.step3 ? 'rotate-90' : ''
-                                    }`}
-                            />
-                        </button>
-
-                        {openSubSteps.step3 && (
-                            <div className="ml-5 p-2.5 text-[11px]">
-                                <p className="leading-relaxed">
-                                    Đối chiếu tính hiệu lực thực tế, định dạng trích dẫn chuẩn pháp lý và sinh câu trả lời có căn cứ xác thực.
-                                </p>
-                            </div>
-                        )}
-                    </div>
+                        );
+                    })}
                 </div>
             )}
         </div>
