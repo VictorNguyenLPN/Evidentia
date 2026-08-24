@@ -14,13 +14,12 @@ import {
     Settings,
     LogOut,
     Sparkles,
-    Clock,
-    ChevronRight,
     ChevronDown,
-    X,
 } from 'lucide-react';
 import Button from './Button';
 import ScrollableText from './AutoScrollText';
+import SettingsModal from './SettingsModal';
+import SearchModal from './SearchModal';
 
 export interface ChatSession {
     id: string;
@@ -32,32 +31,6 @@ export interface ChatSession {
     updated_at?: string;
 }
 
-const formatChatDateTime = (timeStr?: string, isoDate?: string): string => {
-    if (isoDate) {
-        try {
-            const d = new Date(isoDate);
-            if (!isNaN(d.getTime())) {
-                const time = d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
-                const date = d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
-                return `${time} - ${date}`;
-            }
-        } catch {
-            // fallback
-        }
-    }
-    if (!timeStr) return '';
-    if (timeStr.includes('/') || (timeStr.includes('-') && timeStr.length > 8)) {
-        return timeStr;
-    }
-    if (/^\d{1,2}:\d{2}$/.test(timeStr.trim())) {
-        const date = new Date().toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
-        return `${timeStr.trim()} - ${date}`;
-    }
-    const now = new Date();
-    const time = now.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
-    const date = now.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
-    return `${time} - ${date}`;
-};
 
 export interface SidebarProps {
     activeNav?: 'chat' | 'laws' | 'archive';
@@ -100,11 +73,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
     const chats = controlledChats !== undefined ? controlledChats : internalChats;
     const setChats = controlledSetChats || setInternalChats;
 
-    const [searchQuery, setSearchQuery] = useState('');
     const [openMenuChatId, setOpenMenuChatId] = useState<string | null>(null);
     const [editingChatId, setEditingChatId] = useState<string | null>(null);
     const [editingTitle, setEditingTitle] = useState<string>('');
     const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [isPinnedExpanded, setIsPinnedExpanded] = useState(true);
     const [isHistoryExpanded, setIsHistoryExpanded] = useState(true);
     const [isScrolled, setIsScrolled] = useState(false);
@@ -217,93 +190,42 @@ export const Sidebar: React.FC<SidebarProps> = ({
         }
     };
 
+    const handleClearAllChats = async () => {
+        try {
+            const res = await fetch('/api/chats', { method: 'DELETE' });
+            if (res.ok) {
+                setChats([]);
+                if (activeChatId) {
+                    navigate('/chats');
+                }
+            } else {
+                throw new Error('Failed to clear chats');
+            }
+        } catch (err) {
+            console.error('Error clearing chats in Sidebar:', err);
+            throw err;
+        }
+    };
+
     const pinnedChats = chats.filter((c) => c.isPinned);
     const unpinnedChats = chats.filter((c) => !c.isPinned);
 
     return (
         <>
-            {isSearchOpen && (
-                <div className="search-modal fixed inset-0 z-50 flex items-start justify-center pt-24 p-4 bg-slate-900/40 backdrop-blur-xs">
-                    <div
-                        className="fixed inset-0"
-                        onClick={() => setIsSearchOpen(false)}
-                    />
-                    <div className="relative z-10 w-full max-w-2xl bg-white rounded-2xl border border-slate-200 shadow-2xl overflow-hidden flex flex-col max-h-[70vh]">
-                        {/* Search Input Bar */}
-                        <div className="flex items-center px-4 border-b border-slate-200 bg-white">
-                            <Search className="w-5 h-5 text-slate-400 shrink-0 mr-3" />
-                            <input
-                                type="text"
-                                autoFocus
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                onKeyDown={(e) => {
-                                    if (e.key === 'Escape') {
-                                        e.preventDefault();
-                                        setIsSearchOpen(false);
-                                    }
-                                }}
-                                placeholder="Tìm kiếm đoạn chat..."
-                                className="w-full py-4 text-sm bg-transparent text-slate-800 focus:outline-none"
-                            />
-                            {searchQuery && (
-                                <button
-                                    onClick={() => setSearchQuery('')}
-                                    className="p-1 text-slate-400 hover:text-slate-600 rounded-md"
-                                >
-                                    <X className="w-4 h-4" />
-                                </button>
-                            )}
-                        </div>
+            <SettingsModal
+                isOpen={isSettingsOpen}
+                onClose={() => setIsSettingsOpen(false)}
+                chats={chats}
+                onClearAllChats={handleClearAllChats}
+                activeChatId={activeChatId}
+            />
 
-                        <div className="flex-1 overflow-y-auto p-2 space-y-1">
-                            <div className="px-3 py-2 text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center justify-between">
-                                <span>Gần đây</span>
-                                <Clock className="w-4 h-4 text-slate-400" />
-                            </div>
-
-                            <div className="space-y-1">
-                                {chats
-                                    .filter((item) =>
-                                        item.title.toLowerCase().includes(searchQuery.toLowerCase())
-                                    )
-                                    .map((item) => (
-                                        <Button
-                                            key={item.id}
-                                            variant="sidebar"
-                                            onClick={() => {
-                                                handleSelectChat(item.id);
-                                                setIsSearchOpen(false);
-                                            }}
-                                            className="p-3 justify-between items-start group"
-                                        >
-                                            <div className="flex items-center gap-3 min-w-0">
-                                                <div className="min-w-0">
-                                                    <p className="text-sm font-semibold text-slate-800 group-hover:text-indigo-900 truncate">
-                                                        {item.title}
-                                                    </p>
-                                                    <span className="text-xs text-slate-400">
-                                                        {formatChatDateTime(item.time, item.updated_at || item.created_at)}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                            <div className="flex items-center justify-start gap-2 shrink-0 pt-0.5">
-                                                <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 group-hover:bg-indigo-100 text-slate-600 group-hover:text-indigo-700 font-medium">
-                                                    {item.tag}
-                                                </span>
-                                                <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-indigo-600" />
-                                            </div>
-                                        </Button>
-                                    ))}
-                            </div>
-                        </div>
-
-                        <div className="px-4 py-2.5 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-                            <span>Mẹo: Nhấn <strong>ESC</strong> để đóng</span>
-                        </div>
-                    </div>
-                </div>
-            )}
+            <SearchModal
+                isOpen={isSearchOpen}
+                onClose={() => setIsSearchOpen(false)}
+                chats={chats}
+                onSelectChat={handleSelectChat}
+            />
 
             <aside
                 className={`sidebar ${isSidebarOpen ? 'w-64 sm:w-72' : 'w-14'
@@ -736,7 +658,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                     <span className="font-medium">Nâng cấp gói Pro</span>
                                 </button>
                                 <button
-                                    onClick={() => setIsProfileMenuOpen(false)}
+                                    onClick={() => {
+                                        setIsProfileMenuOpen(false);
+                                        setIsSettingsOpen(true);
+                                    }}
                                     className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg text-left cursor-pointer transition-colors"
                                 >
                                     <Settings className="w-4 h-4 text-slate-500 shrink-0" />
