@@ -42,7 +42,7 @@ def _normalize_iso_date(date_str: Optional[str]) -> Optional[str]:
 class HybridRetriever:
     """
     Hybrid Retriever combining:
-    - Dense Semantic Search (intfloat/multilingual-e5-small)
+    - Dense Semantic Search (intfloat/multilingual-e5-large)
     - Sparse BM25 Search (Qdrant/bm25)
     - Fusion using Reciprocal Rank Fusion (RRF)
     - Temporal Filtering (effect_date <= target_date < expire_date)

@@ -244,6 +244,14 @@ def toggle_chat_pin(chat_id: str):
 class RenameChatRequest(BaseModel):
     title: str = Field(..., min_length=1, max_length=255, description="New title for chat session")
 
+@app.delete("/api/chats")
+def clear_all_chats_endpoint():
+    """
+    Clear all chat sessions from MongoDB and memory.
+    """
+    deleted_count = mongo_manager.clear_all_chats()
+    return {"success": True, "deleted_count": deleted_count}
+
 @app.delete("/api/chats/{chat_id}")
 def delete_chat_session(chat_id: str):
     """
