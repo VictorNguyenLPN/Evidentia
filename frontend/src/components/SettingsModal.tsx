@@ -89,7 +89,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 />
 
                 {/* Modal Box */}
-                <div className="relative z-10 w-full max-w-2xl bg-white rounded-2xl border border-slate-200 shadow-2xl overflow-hidden flex flex-col md:flex-row h-[540px] max-h-[88vh] text-slate-800 animate-in zoom-in-95 duration-200">
+                <div className="relative z-10 w-full max-w-2xl bg-white rounded-2xl border border-slate-200 shadow-2xl overflow-hidden flex flex-col md:flex-row h-135 max-h-[88vh] text-slate-800 animate-in zoom-in-95 duration-200">
                     {/* Left Sidebar navigation */}
                     <div className="w-full md:w-56 bg-slate-50/90 border-r border-slate-200/80 p-3 flex flex-col justify-between shrink-0 select-none">
                         <div className="space-y-1">
@@ -282,7 +282,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                 size="sm"
                                 disabled={isClearing}
                                 onClick={() => setIsConfirmingClear(false)}
-                                className="!px-3.5 !py-1.5 text-xs text-slate-700 !bg-slate-100 hover:!bg-slate-200 rounded-lg font-medium"
+                                className="px-3.5 py-1.5 text-xs text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg font-medium"
                             >
                                 <span>Hủy bỏ</span>
                             </Button>
@@ -292,7 +292,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                 size="sm"
                                 disabled={isClearing}
                                 onClick={handleConfirmClear}
-                                className="!w-auto !px-3.5 !py-1.5 text-xs font-semibold !text-white !bg-red-600 hover:!bg-red-700 rounded-lg shadow-xs disabled:opacity-50"
+                                className="w-auto px-3.5 py-1.5 text-xs font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg shadow-xs disabled:opacity-50"
                             >
                                 <span>{isClearing ? 'Đang xóa...' : 'Xóa tất cả'}</span>
                             </Button>
