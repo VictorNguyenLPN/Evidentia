@@ -1,49 +1,116 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import type { ChatSession } from '../types';
+import { chatService } from '../services';
+import { ChatContext } from './chatContextInstance';
 
-export interface ChatSession {
-    id: string;
-    title: string;
-    time: string;
-    tag: string;
-    isPinned: boolean;
-    created_at?: string;
-    updated_at?: string;
-}
+// Temporarily disable all CSS transitions during theme switch to prevent patchy staggered animations
+const disableTransitionsDuringThemeSwitch = () => {
+    const css = document.createElement('style');
+    css.appendChild(
+        document.createTextNode(
+            `*,*::before,*::after{-webkit-transition:none!important;-moz-transition:none!important;-o-transition:none!important;-ms-transition:none!important;transition:none!important}`
+        )
+    );
+    document.head.appendChild(css);
 
-interface ChatContextType {
-    chats: ChatSession[];
-    setChats: React.Dispatch<React.SetStateAction<ChatSession[]>>;
-    fetchChats: () => Promise<void>;
-    isSidebarOpen: boolean;
-    setIsSidebarOpen: React.Dispatch<React.SetStateAction<boolean>>;
-    isSearchOpen: boolean;
-    setIsSearchOpen: React.Dispatch<React.SetStateAction<boolean>>;
-}
-
-const ChatContext = createContext<ChatContextType | undefined>(undefined);
+    return () => {
+        // Force browser layout repaint
+        (() => window.getComputedStyle(document.body))();
+        // Restore interactive transitions on next frame
+        setTimeout(() => {
+            if (css.parentNode) {
+                document.head.removeChild(css);
+            }
+        }, 16);
+    };
+};
 
 export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [chats, setChats] = useState<ChatSession[]>([]);
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
     const [isSearchOpen, setIsSearchOpen] = useState(false);
+    const [isDevMode, setIsDevModeState] = useState<boolean>(() => {
+        try {
+            return localStorage.getItem('evidentia_dev_mode') === 'true';
+        } catch {
+            return false;
+        }
+    });
+
+    const [isDarkMode, setIsDarkModeState] = useState<boolean>(() => {
+        try {
+            const saved = localStorage.getItem('evidentia_dark_mode');
+            if (saved !== null) {
+                return saved === 'true';
+            }
+            return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        } catch {
+            return false;
+        }
+    });
+
+    const setIsDevMode = useCallback((enabled: boolean) => {
+        setIsDevModeState(enabled);
+        try {
+            localStorage.setItem('evidentia_dev_mode', String(enabled));
+        } catch {
+            // ignore localStorage quota errors
+        }
+    }, []);
+
+    const setIsDarkMode = useCallback((enabled: boolean) => {
+        const restoreTransitions = disableTransitionsDuringThemeSwitch();
+        setIsDarkModeState(enabled);
+        try {
+            localStorage.setItem('evidentia_dark_mode', String(enabled));
+        } catch {
+            // ignore
+        }
+        if (enabled) {
+            document.documentElement.classList.add('dark');
+            document.documentElement.style.colorScheme = 'dark';
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+        restoreTransitions();
+    }, []);
+
+    // Sync HTML dark class and colorScheme on mount and changes
+    useEffect(() => {
+        if (isDarkMode) {
+            document.documentElement.classList.add('dark');
+            document.documentElement.style.colorScheme = 'dark';
+        } else {
+            document.documentElement.classList.remove('dark');
+            document.documentElement.style.colorScheme = 'light';
+        }
+    }, [isDarkMode]);
 
     const fetchChats = useCallback(async () => {
         try {
-            const res = await fetch('/api/chats');
-            if (res.ok) {
-                const data = await res.json();
-                if (Array.isArray(data)) {
-                    setChats(data);
-                }
-            }
+            const data = await chatService.getChats();
+            setChats(data);
         } catch (err) {
             console.warn('Could not fetch chats:', err);
         }
     }, []);
 
     useEffect(() => {
-        fetchChats();
-    }, [fetchChats]);
+        let isMounted = true;
+        chatService.getChats()
+            .then((data) => {
+                if (isMounted) {
+                    setChats(data);
+                }
+            })
+            .catch((err) => {
+                console.warn('Could not fetch chats on init:', err);
+            });
+
+        return () => {
+            isMounted = false;
+        };
+    }, []);
 
     return (
         <ChatContext.Provider
@@ -55,6 +122,10 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 setIsSidebarOpen,
                 isSearchOpen,
                 setIsSearchOpen,
+                isDevMode,
+                setIsDevMode,
+                isDarkMode,
+                setIsDarkMode,
             }}
         >
             {children}
@@ -62,10 +133,4 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     );
 };
 
-export const useChat = (): ChatContextType => {
-    const context = useContext(ChatContext);
-    if (!context) {
-        throw new Error('useChat must be used within a ChatProvider');
-    }
-    return context;
-};
+export default ChatProvider;

@@ -1,49 +1,23 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import {
-    Calendar,
-    Paperclip,
-    ArrowUp,
     SlidersHorizontal,
     MoreVertical,
-    X,
-    FileText,
-    CheckCircle2,
-    Loader2,
     Search,
-    Sparkles,
+    Copy,
+    Check,
+    Ellipsis,
+    Share,
+    RefreshCw,
 } from 'lucide-react';
 import MarkdownRenderer from '../components/MarkdownRenderer';
 import Button from '../components/Button';
-import ReasoningProcess, { type PipelineStep, type QueryAnalysis } from '../components/ReasoningProcess';
-import { useChat, type ChatSession } from '../contexts/ChatContext';
-
-interface Citation {
-    document_title: string;
-    hierarchy_path: string[];
-    legal_content?: string;
-    text?: string;
-    issue_date?: string;
-    effect_date?: string;
-    effect_status_name?: string;
-    doc_type?: string;
-    hybrid_score?: number;
-    score?: number;
-    vbpl_url?: string;
-}
-
-interface Message {
-    id: string;
-    sender: 'user' | 'assistant';
-    text: string;
-    timestamp: string;
-    targetDate?: string;
-    analysis?: QueryAnalysis;
-    citations?: Citation[];
-    steps?: PipelineStep[];
-    isStreaming?: boolean;
-    duration?: number;
-}
+import ReasoningProcess from '../components/ReasoningProcess';
+import CitationModal from '../components/CitationModal';
+import ChatInputBar from '../components/ChatInputBar';
+import { useChat } from '../contexts';
+import { chatService } from '../services';
+import type { Message, Citation, ChatSession, PipelineStep, QueryAnalysis, TokenUsage } from '../types';
 
 const CURRENT_USER_EMAIL = 'huy.nguyen@evidentia.vn';
 
@@ -74,394 +48,300 @@ const formatChatHeaderDate = (isoStringOrDate?: string | null): string => {
     return `${dayOfWeek}, ${date}, ${time}`;
 };
 
+interface LocationState {
+    prompt?: string;
+}
+
 export const ChatPage: React.FC = () => {
     const { chatId } = useParams<{ chatId?: string }>();
     const navigate = useNavigate();
     const location = useLocation();
     const { setChats, fetchChats, setIsSearchOpen } = useChat();
 
-    const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
-    const [activeChatId, setActiveChatId] = useState<string | null>(chatId || null);
     const [chatCreatedAt, setChatCreatedAt] = useState<string | null>(null);
-    const [inputPrompt, setInputPrompt] = useState('');
+    const [inputPrompt, setInputPrompt] = useState<string>(() => {
+        const state = location.state as LocationState | null;
+        return state?.prompt || '';
+    });
     const [targetDate, setTargetDate] = useState<string>('');
     const [messages, setMessages] = useState<Message[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [selectedCitation, setSelectedCitation] = useState<Citation | null>(null);
+    const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
 
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const isSendingMessageRef = useRef<string | null>(null);
 
-    // Handle initial prompt from navigation state (e.g. from LawsPage "Hỏi AI về điều này")
+    // Focus textarea if initial prompt was provided from navigation
     useEffect(() => {
-        if (location.state && typeof location.state === 'object' && 'prompt' in location.state) {
-            const initialText = (location.state as any).prompt;
-            if (initialText) {
-                setInputPrompt(initialText);
-                setTimeout(() => {
-                    if (textareaRef.current) {
-                        textareaRef.current.focus();
-                    }
-                }, 100);
-            }
+        const state = location.state as LocationState | null;
+        if (state?.prompt && textareaRef.current) {
+            const timer = setTimeout(() => {
+                textareaRef.current?.focus();
+            }, 100);
+            return () => clearTimeout(timer);
         }
     }, [location.state]);
 
     // Load messages when URL chatId changes
     useEffect(() => {
         if (!chatId) {
-            setActiveChatId(null);
-            setMessages([]);
-            setChatCreatedAt(null);
             return;
         }
 
-        // If this navigation was triggered by submitting the first question, skip premature 404 fetch
         if (isSendingMessageRef.current === chatId) {
             isSendingMessageRef.current = null;
-            setActiveChatId(chatId);
             return;
         }
 
-        setActiveChatId(chatId);
-
-        const loadChatDetails = async () => {
-            try {
-                const res = await fetch(`/api/chats/${encodeURIComponent(chatId)}`);
-                if (res.ok) {
-                    const chatDoc = await res.json();
-                    if (chatDoc) {
-                        if (chatDoc.created_at) {
-                            setChatCreatedAt(chatDoc.created_at);
-                        } else if (chatDoc.updated_at) {
-                            setChatCreatedAt(chatDoc.updated_at);
-                        }
-                        if (Array.isArray(chatDoc.messages)) {
-                            setMessages(chatDoc.messages);
-                        }
+        let isMounted = true;
+        chatService.getChatById(chatId)
+            .then((chatDoc) => {
+                if (!isMounted) return;
+                if (chatDoc) {
+                    setChatCreatedAt(chatDoc.created_at || chatDoc.updated_at || null);
+                    if (chatDoc.messages && Array.isArray(chatDoc.messages)) {
+                        setMessages(chatDoc.messages);
+                    } else {
+                        setMessages([]);
                     }
-                } else if (res.status === 404) {
-                    console.warn(`Chat ${chatId} not found`);
+                } else {
                     setMessages([]);
-                    setChatCreatedAt(null);
                 }
-            } catch (err) {
-                console.warn('Error loading chat messages:', err);
-            }
-        };
+            })
+            .catch((err) => {
+                console.warn('Could not fetch chat by ID:', err);
+                if (isMounted) setMessages([]);
+            });
 
-        loadChatDetails();
+        return () => {
+            isMounted = false;
+        };
     }, [chatId]);
 
-    // Auto-scroll to bottom of messages
+    // Auto scroll to bottom
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages, isLoading]);
 
-    const isSendingMessageRef = useRef<string | null>(null);
-
-    // Auto resize textarea
-    useEffect(() => {
-        if (textareaRef.current) {
-            textareaRef.current.style.height = 'auto';
-            textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 240)}px`;
-        }
-    }, [inputPrompt]);
-
-
-    // Handle Escape key to close citation modal
-    useEffect(() => {
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === 'Escape' && selectedCitation) {
-                setSelectedCitation(null);
-            }
-        };
-        window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [selectedCitation]);
-
-    // Send Message Handler (Real-Time SSE Streaming)
     const handleSendMessage = async () => {
-        const queryText = inputPrompt.trim();
-        if (!queryText || isLoading) return;
+        const trimmed = inputPrompt.trim();
+        if (!trimmed || isLoading) return;
 
-        // Generate chat ID immediately on frontend if starting a new chat
-        const isNewChat = !chatId && !activeChatId;
-        const currentChatId = chatId || activeChatId || generateChatId(CURRENT_USER_EMAIL);
-
-        // Instantly update URL and active state when the first question is submitted
-        if (isNewChat) {
-            isSendingMessageRef.current = currentChatId;
-            setActiveChatId(currentChatId);
-            navigate(`/chats/${encodeURIComponent(currentChatId)}`, { replace: true });
-
-            // Optimistically add to sidebar immediately
-            const now = new Date();
-            setChatCreatedAt(now.toISOString());
-            const formattedTimeDate = `${now.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} - ${now.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })}`;
-            const newChatSession: ChatSession = {
-                id: currentChatId,
-                title: queryText,
-                time: formattedTimeDate,
-                created_at: now.toISOString(),
-                updated_at: now.toISOString(),
-                tag: 'Pháp luật',
-                isPinned: false
-            };
-            setChats(prev => [newChatSession, ...prev.filter(c => c.id !== currentChatId)]);
+        let activeId = chatId;
+        if (!activeId) {
+            activeId = generateChatId();
+            isSendingMessageRef.current = activeId;
+            navigate(`/chats/${activeId}`, { replace: true });
         }
 
-        const currentTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        const userMsg: Message = {
-            id: String(Date.now()),
+        const userMsgId = `usr_${Date.now()}`;
+        const assistantMsgId = `ast_${Date.now()}`;
+
+        const userMessage: Message = {
+            id: userMsgId,
             sender: 'user',
-            text: queryText,
-            timestamp: currentTime,
+            text: trimmed,
             targetDate: targetDate || undefined,
+            timestamp: new Date().toISOString(),
         };
 
-        const assistantMsgId = String(Date.now() + 1);
-        const initialAssistantMsg: Message = {
+        const initialAssistantMessage: Message = {
             id: assistantMsgId,
             sender: 'assistant',
             text: '',
-            timestamp: currentTime,
-            targetDate: targetDate || undefined,
-            analysis: undefined,
-            citations: [],
-            steps: [],
             isStreaming: true,
+            steps: [],
+            timestamp: new Date().toISOString(),
         };
 
-        setMessages(prev => [...prev, userMsg, initialAssistantMsg]);
+        setMessages((prev) => [...prev, userMessage, initialAssistantMessage]);
         setInputPrompt('');
         setIsLoading(true);
-        const requestStartTime = Date.now();
+
+        const currentTurnStartTime = Date.now();
+
+        // Optimistically add chat to sidebar
+        const isFirstMessage = !chatId || messages.length === 0;
+        if (isFirstMessage) {
+            const truncatedTitle = trimmed.length > 35 ? trimmed.substring(0, 35) + '...' : trimmed;
+            const newChatSession: ChatSession = {
+                id: activeId,
+                title: truncatedTitle,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+                is_pinned: false,
+                isPinned: false,
+            };
+
+            setChats((prev) => {
+                const exists = prev.some((c) => c.id === activeId);
+                if (exists) return prev;
+                return [newChatSession, ...prev];
+            });
+        }
 
         try {
-            const res = await fetch('/api/chat/stream', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    query: queryText,
+            await chatService.streamChat(
+                {
+                    chat_id: activeId,
+                    query: trimmed,
                     target_date: targetDate || undefined,
-                    top_k: 10,
-                    chat_id: currentChatId,
-                }),
-            });
+                    mode: 'agentic',
+                },
+                (event) => {
+                    const eventType = event.type;
 
-            if (!res.ok || !res.body) {
-                const errorData = await res.json().catch(() => ({ detail: 'Unknown error' }));
-                throw new Error(errorData.detail || 'Lỗi kết nối máy chủ');
-            }
+                    setMessages((prev) =>
+                        prev.map((msg) => {
+                            if (msg.id !== assistantMsgId) return msg;
 
-            const reader = res.body.getReader();
-            const decoder = new TextDecoder('utf-8');
-            let buffer = '';
+                            // 1. Pipeline step updates
+                            if (eventType === 'step' || eventType === 'step_update') {
+                                const stepData = event.data as PipelineStep | undefined;
+                                if (!stepData) return msg;
+                                const existingSteps = msg.steps ? [...msg.steps] : [];
+                                const targetIdx = existingSteps.findIndex(
+                                    (s) => s.step === stepData.step || (s.title && s.title === stepData.title)
+                                );
 
-            while (true) {
-                const { value, done } = await reader.read();
-                if (done) break;
-
-                buffer += decoder.decode(value, { stream: true });
-                const lines = buffer.split('\n\n');
-                buffer = lines.pop() || '';
-
-                for (const block of lines) {
-                    const trimmed = block.trim();
-                    if (!trimmed.startsWith('data:')) continue;
-                    const jsonStr = trimmed.replace(/^data:\s*/, '');
-                    if (!jsonStr) continue;
-
-                    try {
-                        const event = JSON.parse(jsonStr);
-
-                        if (event.type === 'step_start') {
-                            setMessages(prev =>
-                                prev.map(msg => {
-                                    if (msg.id !== assistantMsgId) return msg;
-                                    const existingSteps = msg.steps || [];
-                                    const stepIdx = existingSteps.findIndex(s => s.step === event.step);
-                                    const newSteps = [...existingSteps];
-                                    if (stepIdx >= 0) {
-                                        newSteps[stepIdx] = {
-                                            ...newSteps[stepIdx],
-                                            status: 'running',
-                                            message: event.message
-                                        };
-                                    } else {
-                                        newSteps.push({
-                                            step: event.step,
-                                            status: 'running',
-                                            message: event.message
-                                        });
-                                    }
-                                    return { ...msg, steps: newSteps, isStreaming: true };
-                                })
-                            );
-                        } else if (event.type === 'step_complete') {
-                            setMessages(prev =>
-                                prev.map(msg => {
-                                    if (msg.id !== assistantMsgId) return msg;
-                                    const existingSteps = msg.steps || [];
-                                    const stepIdx = existingSteps.findIndex(s => s.step === event.step);
-                                    const newSteps = [...existingSteps];
-                                    if (stepIdx >= 0) {
-                                        newSteps[stepIdx] = {
-                                            ...newSteps[stepIdx],
-                                            status: 'completed',
-                                            message: event.message || newSteps[stepIdx].message,
-                                            details: event.details || newSteps[stepIdx].details
-                                        };
-                                    } else {
-                                        newSteps.push({
-                                            step: event.step,
-                                            status: 'completed',
-                                            message: event.message,
-                                            details: event.details
-                                        });
-                                    }
-                                    return {
-                                        ...msg,
-                                        steps: newSteps,
-                                        analysis: event.analysis || msg.analysis,
-                                        citations: event.citations || msg.citations,
-                                        isStreaming: true
+                                if (targetIdx >= 0) {
+                                    existingSteps[targetIdx] = {
+                                        ...existingSteps[targetIdx],
+                                        ...stepData,
+                                        details: {
+                                            ...existingSteps[targetIdx].details,
+                                            ...stepData.details,
+                                        },
                                     };
-                                })
-                            );
-                        } else if (event.type === 'token') {
-                            setMessages(prev =>
-                                prev.map(msg => {
-                                    if (msg.id !== assistantMsgId) return msg;
-                                    return {
-                                        ...msg,
-                                        text: msg.text + event.content,
-                                        isStreaming: true
-                                    };
-                                })
-                            );
-                        } else if (event.type === 'done') {
-                            const finalDuration = +((Date.now() - requestStartTime) / 1000).toFixed(1);
-                            setMessages(prev =>
-                                prev.map(msg => {
-                                    if (msg.id !== assistantMsgId) return msg;
-                                    return {
-                                        ...msg,
-                                        text: event.answer || msg.text,
-                                        analysis: event.analysis || msg.analysis,
-                                        citations: event.citations || msg.citations,
-                                        steps: event.steps || msg.steps,
-                                        isStreaming: false,
-                                        duration: finalDuration
-                                    };
-                                })
-                            );
+                                } else {
+                                    existingSteps.push(stepData);
+                                }
 
-                            if (event.chat_id) {
-                                setActiveChatId(event.chat_id);
+                                return {
+                                    ...msg,
+                                    steps: existingSteps,
+                                };
                             }
-                            fetchChats();
-                        } else if (event.type === 'error') {
-                            throw new Error(event.detail || 'Lỗi xử lý luồng stream');
-                        }
-                    } catch (parseErr) {
-                        console.warn('Error parsing SSE event chunk:', parseErr);
-                    }
+
+                            // 2. Query analysis event
+                            if (eventType === 'analysis') {
+                                return {
+                                    ...msg,
+                                    analysis: event.data as QueryAnalysis,
+                                };
+                            }
+
+                            // 3. Streaming answer token chunk
+                            if (eventType === 'chunk') {
+                                const chunkData = event.data as { text?: string } | string | undefined;
+                                const chunkText = typeof chunkData === 'string' ? chunkData : (chunkData?.text || '');
+                                return {
+                                    ...msg,
+                                    text: (msg.text || '') + chunkText,
+                                };
+                            }
+
+                            // 4. Citations list
+                            if (eventType === 'citations') {
+                                return {
+                                    ...msg,
+                                    citations: event.data as Citation[],
+                                };
+                            }
+
+                            // 5. Final full response / answer
+                            if (eventType === 'answer' || eventType === 'final_answer') {
+                                const answerData = event.data as { text?: string; token_usage?: TokenUsage; citations?: Citation[] } | string | undefined;
+                                const finalText = typeof answerData === 'string' ? answerData : (answerData?.text || msg.text);
+                                const tokenUsage = typeof answerData === 'object' && answerData ? (answerData.token_usage || msg.token_usage) : msg.token_usage;
+                                const citations = typeof answerData === 'object' && answerData ? (answerData.citations || msg.citations) : msg.citations;
+                                const turnDuration = +((Date.now() - currentTurnStartTime) / 1000).toFixed(1);
+
+                                return {
+                                    ...msg,
+                                    text: finalText,
+                                    token_usage: tokenUsage,
+                                    citations: citations,
+                                    isStreaming: false,
+                                    duration: turnDuration,
+                                };
+                            }
+
+                            // 6. Token usage telemetry update
+                            if (eventType === 'token_usage') {
+                                return {
+                                    ...msg,
+                                    token_usage: event.data as TokenUsage,
+                                };
+                            }
+
+                            // 7. Error event
+                            if (eventType === 'error') {
+                                const errData = event.data as { message?: string } | undefined;
+                                return {
+                                    ...msg,
+                                    text: (msg.text ? msg.text + '\n\n' : '') + `❌ Lỗi: ${errData?.message || 'Đã có lỗi xảy ra.'}`,
+                                    isStreaming: false,
+                                };
+                            }
+
+                            return msg;
+                        })
+                    );
                 }
-            }
-        } catch (err: any) {
-            console.error('Error in chat stream request:', err);
-            setMessages(prev =>
-                prev.map(msg => {
-                    if (msg.id !== assistantMsgId) return msg;
-                    return {
-                        ...msg,
-                        text: msg.text
-                            ? `${msg.text}\n\n⚠️ *Ngắt kết nối luồng: ${err.message}*`
-                            : `⚠️ **Không thể hoàn tất tra cứu**: ${err.message || 'Lỗi kết nối máy chủ hoặc API'}. Vui lòng kiểm tra lại cấu hình.`,
-                        isStreaming: false
-                    };
-                })
+            );
+
+            // Re-fetch chat list to get official backend summary / title
+            await fetchChats();
+        } catch (err: unknown) {
+            const errorMsg = err instanceof Error ? err.message : 'Không thể kết nối đến máy chủ.';
+            setMessages((prev) =>
+                prev.map((msg) =>
+                    msg.id === assistantMsgId
+                        ? {
+                            ...msg,
+                            text: `❌ Lỗi kết nối: ${errorMsg}. Vui lòng thử lại sau.`,
+                            isStreaming: false,
+                        }
+                        : msg
+                )
             );
         } finally {
             setIsLoading(false);
+            setMessages((prev) =>
+                prev.map((msg) =>
+                    msg.id === assistantMsgId ? { ...msg, isStreaming: false } : msg
+                )
+            );
         }
     };
 
-    const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            handleSendMessage();
+    const handleCopy = async (text?: string, messageId?: string, e?: React.MouseEvent) => {
+        if (e) e.stopPropagation();
+        if (!text) return;
+        try {
+            await navigator.clipboard.writeText(text);
+            setCopiedMessageId(messageId || null);
+            setTimeout(() => {
+                setCopiedMessageId((prev) => (prev === messageId ? null : prev));
+            }, 2000);
+        } catch (err) {
+            console.error('Failed to copy answer:', err);
         }
     };
+
+    const activeMessages = chatId ? messages : [];
 
     return (
-        <div className="flex flex-col w-full h-full">
-            {selectedCitation && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs">
-                    <div className="fixed inset-0" onClick={() => setSelectedCitation(null)} />
-                    <div className="relative z-10 w-full max-w-2xl bg-white rounded-2xl border border-slate-200 shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
-                        <div className="flex items-center justify-between p-4 border-b border-slate-100 bg-slate-50/70">
-                            <div className="flex items-center gap-2.5 min-w-0">
-                                <FileText className="w-5 h-5 text-indigo-600 shrink-0" />
-                                <div className="min-w-0">
-                                    <h3 className="text-sm font-bold text-slate-900 truncate">
-                                        {selectedCitation.document_title}
-                                    </h3>
-                                    <p className="text-xs text-slate-500 truncate">
-                                        {selectedCitation.hierarchy_path?.join(' > ')}
-                                    </p>
-                                </div>
-                            </div>
-                            <Button
-                                variant="icon"
-                                size="sm"
-                                onClick={() => setSelectedCitation(null)}
-                                title="Đóng"
-                            >
-                                <X className="w-4 h-4" />
-                            </Button>
-                        </div>
+        <div className="flex flex-col w-full h-full bg-white dark:bg-slate-950">
+            <CitationModal
+                citation={selectedCitation}
+                onClose={() => setSelectedCitation(null)}
+            />
 
-                        <div className="p-5 overflow-y-auto space-y-4 text-sm leading-relaxed text-slate-700">
-                            <div className="flex flex-wrap gap-2 text-xs">
-                                {selectedCitation.effect_status_name && (
-                                    <span className="px-2.5 py-1 rounded-md bg-emerald-50 text-emerald-700 font-medium border border-emerald-200/60">
-                                        Hiệu lực: {selectedCitation.effect_status_name}
-                                    </span>
-                                )}
-                                {selectedCitation.effect_date && (
-                                    <span className="px-2.5 py-1 rounded-md bg-slate-100 text-slate-700 font-medium">
-                                        Ngày hiệu lực: {selectedCitation.effect_date}
-                                    </span>
-                                )}
-                                {selectedCitation.doc_type && (
-                                    <span className="px-2.5 py-1 rounded-md bg-indigo-50 text-indigo-700 font-medium">
-                                        Loại VB: {selectedCitation.doc_type}
-                                    </span>
-                                )}
-                            </div>
-
-                            <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200/80 font-mono text-xs whitespace-pre-wrap leading-relaxed text-slate-800">
-                                {selectedCitation.legal_content}
-                            </div>
-                        </div>
-
-                        <div className="p-3 bg-slate-50 border-t border-slate-100 flex justify-end">
-                            <Button
-                                variant="primary"
-                                size="sm"
-                                onClick={() => setSelectedCitation(null)}
-                            >
-                                Đóng
-                            </Button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            <header className="py-5 sticky top-0 z-0 h-14 flex items-center justify-end bg-transparent pointer-events-none">
+            <header className="p-5 sticky top-0 z-0 h-14 flex items-center justify-end bg-transparent pointer-events-none">
                 <div className="flex items-center gap-1.5 pointer-events-auto">
                     <Button
                         variant="ghost"
@@ -469,7 +349,7 @@ export const ChatPage: React.FC = () => {
                         onClick={() => setIsSearchOpen(true)}
                         title="Tìm kiếm"
                     >
-                        <Search className="w-4 h-4 text-slate-800" />
+                        <Search className="w-4 h-4 text-slate-800 dark:text-slate-200" />
                         <span className="hidden sm:inline font-medium">Tìm kiếm</span>
                     </Button>
                     <Button
@@ -478,7 +358,7 @@ export const ChatPage: React.FC = () => {
                         onClick={() => setIsSearchOpen(true)}
                         title="Cấu hình"
                     >
-                        <SlidersHorizontal className="w-4 h-4 text-slate-800" />
+                        <SlidersHorizontal className="w-4 h-4 text-slate-800 dark:text-slate-200" />
                     </Button>
                     <Button
                         variant="icon"
@@ -486,105 +366,117 @@ export const ChatPage: React.FC = () => {
                         onClick={() => setIsSearchOpen(true)}
                         title="Tùy chọn khác"
                     >
-                        <MoreVertical className="w-4 h-4 text-slate-800" />
+                        <MoreVertical className="w-4 h-4 text-slate-800 dark:text-slate-200" />
                     </Button>
                 </div>
             </header>
 
-            <main className="relative z-10 flex-1 flex flex-col h-full bg-white overflow-hidden">
+            <main className="relative z-10 flex-1 flex flex-col h-full bg-white dark:bg-slate-950 overflow-hidden">
                 <div className="flex-1 overflow-y-auto z-20 flex flex-col justify-between">
-                    {messages.length === 0 ? (
+                    {activeMessages.length === 0 ? (
                         <div className="flex-1 flex flex-col items-center justify-center my-auto">
                             <div className="max-w-2xl w-full text-center space-y-5">
                                 <div className="space-y-2">
-                                    <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+                                    <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
                                         Hệ thống Sẵn sàng Hỗ trợ
                                     </h2>
-                                    <p className="text-sm sm:text-base text-slate-600 max-w-lg mx-auto leading-relaxed">
+                                    <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400 max-w-lg mx-auto leading-relaxed">
                                         Nhập câu hỏi, tình huống pháp lý hoặc đính kèm văn bản hợp đồng để kích hoạt quy trình lập luận và tra cứu theo mốc thời gian.
                                     </p>
                                 </div>
                             </div>
                         </div>
                     ) : (
-                        /* Active Conversation Messages */
                         <div className="relative z-10 max-w-4xl w-full mx-auto space-y-3.5 pb-4">
                             {/* Chat Header Timestamp Row */}
                             <div className="flex items-center justify-center select-none">
-                                <span className="text-sm text-slate-400 font-medium">
+                                <span className="text-sm text-slate-400 dark:text-slate-500 font-medium">
                                     {formatChatHeaderDate(chatCreatedAt)}
                                 </span>
                             </div>
 
-                            {messages.map((msg) => (
+                            {activeMessages.map((msg) => (
                                 <div
                                     key={msg.id}
                                     className={`w-full flex flex-col ${msg.sender === 'user' ? 'items-end' : 'items-start'}`}
                                 >
                                     {msg.sender === 'user' ? (
-                                        <div className="max-w-2xl text-black">
-                                            <div className="flex items-center justify-end gap-2 mb-1.5 text-[11px] text-gray-700">
+                                        <div className="max-w-2xl text-slate-900 dark:text-white">
+                                            <div className="flex items-center justify-end gap-2 mb-1.5 text-[11px] text-gray-600 dark:text-gray-400">
                                                 {msg.targetDate && (
                                                     <span>Mốc: {msg.targetDate}</span>
                                                 )}
                                             </div>
-                                            <p className="text-sm sm:text-base leading-relaxed whitespace-pre-wrap bg-slate-200 px-4 py-3 rounded-2xl">
+                                            <p className="text-sm sm:text-base leading-relaxed whitespace-pre-wrap bg-slate-200 dark:bg-slate-800 text-slate-900 dark:text-slate-100 px-4 py-3 rounded-2xl">
                                                 {msg.text}
                                             </p>
                                         </div>
                                     ) : (
                                         <div className="max-w-4xl py-4 space-y-4">
-                                            {/* Reasoning / Thinking Process Step-by-Step */}
-                                            {(msg.analysis || (msg.steps && msg.steps.length > 0) || msg.isStreaming) && (
+                                            {/* Reasoning Process */}
+                                            {(msg.analysis || (msg.steps && msg.steps.length > 0) || msg.token_usage || msg.isStreaming) && (
                                                 <ReasoningProcess
                                                     analysis={msg.analysis}
                                                     steps={msg.steps}
+                                                    tokenUsage={msg.token_usage}
                                                     citationsCount={msg.citations?.length || 0}
                                                     isStreaming={msg.isStreaming}
                                                     duration={msg.duration}
                                                 />
                                             )}
 
-                                            {/* Citations Header Bar */}
-                                            {/* {msg.citations && msg.citations.length > 0 && (
-                                                <div className="space-y-2">
-                                                    <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 uppercase tracking-wide">
-                                                        <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                                                        <span>Căn cứ pháp lý trích dẫn ({msg.citations.length})</span>
-                                                    </div>
-                                                    <div className="flex flex-wrap gap-2">
-                                                        {msg.citations.map((cit, idx) => (
-                                                            <button
-                                                                key={idx}
-                                                                onClick={() => setSelectedCitation(cit)}
-                                                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:border-indigo-400 hover:bg-indigo-50/50 text-xs text-slate-700 hover:text-indigo-700 transition-colors shadow-2xs cursor-pointer"
-                                                            >
-                                                                <FileText className="w-3.5 h-3.5 text-indigo-600" />
-                                                                <span className="font-medium truncate max-w-[200px]">
-                                                                    {cit.document_title}
-                                                                </span>
-                                                                {cit.effect_status_name && (
-                                                                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100/70 text-emerald-800 font-medium">
-                                                                        {cit.effect_status_name}
-                                                                    </span>
-                                                                )}
-                                                            </button>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                            )} */}
-
-                                            {/* Answer Body (Markdown with Live Token Streaming) */}
-                                            <div className="text-sm sm:text-base leading-relaxed text-slate-900">
+                                            {/* Answer Body */}
+                                            <div className="text-sm sm:text-base leading-relaxed text-slate-900 dark:text-slate-100">
                                                 {msg.text && (
                                                     <div>
                                                         <MarkdownRenderer content={msg.text} />
                                                         {msg.isStreaming && (
-                                                            <span className="inline-block w-1.5 h-4 ml-1 bg-indigo-600 animate-pulse align-middle" />
+                                                            <span className="inline-block w-1.5 h-4 ml-1 bg-indigo-600 dark:bg-indigo-400 animate-pulse align-middle" />
                                                         )}
                                                     </div>
                                                 )}
                                             </div>
+
+                                            {!msg.isStreaming && msg.text && (
+                                                <div className="flex items-center gap-1">
+                                                    <Button
+                                                        variant="icon"
+                                                        size="xs"
+                                                        onClick={(e) => handleCopy(msg.text, msg.id, e)}
+                                                        title="Sao chép phản hồi"
+                                                    >
+                                                        {copiedMessageId === msg.id ? (
+                                                            <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                                                        ) : (
+                                                            <Copy className="w-4 h-4 text-slate-700 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200" />
+                                                        )}
+                                                    </Button>
+
+                                                    <Button
+                                                        variant="icon"
+                                                        size="xs"
+                                                        title="Sao chép phản hồi"
+                                                    >
+                                                        <Share className="w-4 h-4 text-slate-700 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200" />
+                                                    </Button>
+
+                                                    <Button
+                                                        variant="icon"
+                                                        size="xs"
+                                                        title="Sao chép phản hồi"
+                                                    >
+                                                        <RefreshCw className="w-4 h-4 text-slate-700 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200" />
+                                                    </Button>
+
+                                                    <Button
+                                                        variant="icon"
+                                                        size="xs"
+                                                        title="Sao chép phản hồi"
+                                                    >
+                                                        <Ellipsis className="w-4 h-4 text-slate-700 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200" />
+                                                    </Button>
+                                                </div>
+                                            )}
                                         </div>
                                     )}
                                 </div>
@@ -594,86 +486,16 @@ export const ChatPage: React.FC = () => {
                         </div>
                     )}
 
-                    {/* ================= INPUT FOOTER AREA (STICKY BOTTOM INSIDE SCROLL CONTAINER) ================= */}
-                    <div className="sticky bottom-0 z-20 max-w-4xl w-full mx-auto mt-auto pt-2 bg-white rounded-lg">
-                        {/* Date Picker Popover */}
-                        {isDatePickerOpen && (
-                            <div className="mb-2 p-3 bg-white border border-slate-200 rounded-xl shadow-lg flex items-center justify-between gap-3 text-xs">
-                                <span className="font-medium text-slate-700">Chọn mốc thời gian tra cứu:</span>
-                                <input
-                                    type="date"
-                                    value={targetDate}
-                                    onChange={(e) => setTargetDate(e.target.value)}
-                                    className="border border-slate-300 rounded-md px-2 py-1 text-slate-800 text-xs focus:outline-indigo-600"
-                                />
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => setIsDatePickerOpen(false)}
-                                    className="px-2 py-1 h-auto text-xs"
-                                >
-                                    Đóng
-                                </Button>
-                            </div>
-                        )}
-
-                        <div className="flex flex-col rounded-2xl bg-white border border-slate-300 focus-within:ring-3 focus-within:ring-indigo-100 shadow-lg shadow-slate-200/50 p-3">
-                            <textarea
-                                ref={textareaRef}
-                                value={inputPrompt}
-                                onChange={(e) => setInputPrompt(e.target.value)}
-                                onKeyDown={handleKeyDown}
-                                rows={1}
-                                placeholder="Mô tả câu hỏi hoặc yêu cầu tra cứu pháp luật theo thời điểm..."
-                                className="w-full bg-transparent text-slate-900 text-sm sm:text-base px-1.5 py-1 focus:outline-none resize-none font-sans min-h-10 max-h-56 overflow-y-auto"
-                            />
-
-                            <div className="flex items-center justify-between pt-2.5 mt-1 border-t border-slate-100">
-                                <div className="flex items-center gap-1.5">
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        icon={<Paperclip className="w-4 h-4" />}
-                                        className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 font-medium"
-                                    >
-                                        <span className="hidden sm:inline">Tài liệu</span>
-                                    </Button>
-
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        icon={<Calendar className="w-4 h-4" />}
-                                        onClick={() => setIsDatePickerOpen(prev => !prev)}
-                                        className={`px-3 py-1.5 font-medium ${targetDate ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'}`}
-                                    >
-                                        <span className="hidden sm:inline">
-                                            {targetDate ? `Mốc: ${targetDate}` : 'Mốc thời gian'}
-                                        </span>
-                                    </Button>
-                                </div>
-
-                                {/* Send Button */}
-                                <Button
-                                    circle={true}
-                                    variant="primary"
-                                    onClick={handleSendMessage}
-                                    disabled={!inputPrompt.trim() || isLoading}
-                                    className="w-9 h-9 disabled:opacity-50 disabled:cursor-not-allowed"
-                                    title="Gửi yêu cầu"
-                                >
-                                    <ArrowUp className="w-4 h-4" />
-                                </Button>
-                            </div>
-                        </div>
-
-                        {/* Footer Disclaimer Note */}
-                        <p className="my-3 text-center text-xs text-slate-500">
-                            Evidentia có thể trả lời chưa chính xác. Vui lòng kiểm tra các thông tin quan trọng
-                        </p>
-                    </div>
+                    <ChatInputBar
+                        inputPrompt={inputPrompt}
+                        setInputPrompt={setInputPrompt}
+                        targetDate={targetDate}
+                        setTargetDate={setTargetDate}
+                        isLoading={isLoading}
+                        onSendMessage={handleSendMessage}
+                        textareaRef={textareaRef}
+                    />
                 </div>
-
-
             </main>
         </div>
     );

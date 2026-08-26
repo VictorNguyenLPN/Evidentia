@@ -213,7 +213,8 @@ class MongoManager:
         target_date: Optional[str] = None,
         analysis: Optional[Dict[str, Any]] = None,
         citations: Optional[List[Dict[str, Any]]] = None,
-        steps: Optional[List[Dict[str, Any]]] = None
+        steps: Optional[List[Dict[str, Any]]] = None,
+        token_usage: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         """
         Save or update a chat session with the user prompt and assistant reply.
@@ -241,7 +242,8 @@ class MongoManager:
             "targetDate": target_date,
             "analysis": analysis or {},
             "citations": citations or [],
-            "steps": steps or []
+            "steps": steps or [],
+            "token_usage": token_usage or {}
         }
 
         domain = (analysis or {}).get("domain") or "Pháp luật"

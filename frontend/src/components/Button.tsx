@@ -20,23 +20,23 @@ export const Button: React.FC<ButtonProps> = ({
     ...props
 }) => {
     const baseClasses =
-        'flex items-center cursor-pointer select-none disabled:opacity-50 disabled:cursor-not-allowed';
+        'flex items-center cursor-pointer select-none disabled:opacity-50 disabled:cursor-not-allowed transition-colors';
 
     const roundedClass = circle ? 'rounded-full' : (variant === 'primary' ? 'rounded-xl' : 'rounded-lg');
 
     const variantClasses = {
-        sidebar: `w-full justify-start gap-2.5 text-left text-sm text-slate-900 ${active
-            ? 'bg-slate-200'
-            : 'bg-transparent hover:bg-slate-200/80'
+        sidebar: `w-full justify-start gap-2.5 text-left text-sm text-slate-900 dark:text-slate-200 ${active
+            ? 'bg-slate-200 dark:bg-slate-800 text-slate-900 dark:text-white font-medium'
+            : 'bg-transparent hover:bg-slate-200/80 dark:hover:bg-slate-800'
             }`,
 
         icon: `justify-center ${active
-            ? 'bg-slate-200 text-slate-900'
-            : 'bg-transparent hover:bg-slate-200/80 text-slate-600 hover:text-slate-900'
+            ? 'bg-slate-200 dark:bg-slate-800 text-slate-900 dark:text-white'
+            : 'bg-transparent hover:bg-slate-200/80 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
             }`,
         ghost: `justify-center text-sm ${active
-            ? 'bg-slate-200 text-slate-900'
-            : 'bg-transparent hover:bg-slate-200/80 text-slate-700 hover:text-slate-900'
+            ? 'bg-slate-200 dark:bg-slate-800 text-slate-900 dark:text-white'
+            : 'bg-transparent hover:bg-slate-200/80 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
             }`,
         primary:
             'bg-indigo-600 hover:bg-indigo-700 text-white font-semibold justify-center shadow-xs',

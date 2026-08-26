@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
     SquarePen,
@@ -6,31 +6,20 @@ import {
     PanelLeft,
     LibraryBig,
     ArchiveRestore,
-    Pin,
-    PinOff,
-    MoreHorizontal,
-    Pencil,
-    Trash2,
     Settings,
     LogOut,
+    Sparkle,
     Sparkles,
     ChevronDown,
 } from 'lucide-react';
 import Button from './Button';
-import ScrollableText from './AutoScrollText';
 import SettingsModal from './SettingsModal';
 import SearchModal from './SearchModal';
+import SidebarChatItem from './SidebarChatItem';
+import type { ChatSession } from '../types';
+import { chatService } from '../services';
 
-export interface ChatSession {
-    id: string;
-    title: string;
-    time: string;
-    tag: string;
-    isPinned: boolean;
-    created_at?: string;
-    updated_at?: string;
-}
-
+export type { ChatSession };
 
 export interface SidebarProps {
     activeNav?: 'chat' | 'laws' | 'archive';
@@ -82,25 +71,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
     const [isHistoryExpanded, setIsHistoryExpanded] = useState(true);
     const [isScrolled, setIsScrolled] = useState(false);
 
-    const fetchChats = async () => {
+    const fetchChats = useCallback(async () => {
         try {
-            const res = await fetch('/api/chats');
-            if (res.ok) {
-                const data = await res.json();
-                if (Array.isArray(data)) {
-                    setChats(data);
-                }
-            }
+            const data = await chatService.getChats();
+            setChats(data);
         } catch (err) {
             console.warn('Could not fetch chats in Sidebar:', err);
         }
-    };
+    }, [setChats]);
 
     useEffect(() => {
         if (controlledChats === undefined) {
             fetchChats();
         }
-    }, [controlledChats]);
+    }, [controlledChats, fetchChats]);
 
     // Handle shortcut Cmd/Ctrl + K and Escape for search modal
     useEffect(() => {
@@ -126,92 +110,107 @@ export const Sidebar: React.FC<SidebarProps> = ({
         }
     };
 
-    const handleSelectChat = (id: string) => {
+    const handleSelectChat = (chatId: string) => {
         if (onSelectChat) {
-            onSelectChat(id);
+            onSelectChat(chatId);
         } else {
-            navigate(`/chats/${id}`);
+            navigate(`/chats/${chatId}`);
         }
     };
 
-    const togglePin = async (id: string, e: React.MouseEvent) => {
-        e.stopPropagation();
+    const deleteChat = async (chatId: string, e?: React.MouseEvent) => {
+        if (e) e.stopPropagation();
+        setOpenMenuChatId(null);
         try {
-            const res = await fetch(`/api/chats/${id}/pin`, { method: 'POST' });
-            if (res.ok) {
-                const data = await res.json();
-                setChats((prev) =>
-                    prev.map((c) => (c.id === id ? { ...c, isPinned: data.is_pinned } : c))
-                );
+            await chatService.deleteChat(chatId);
+            setChats((prev) => prev.filter((c) => c.id !== chatId));
+            if (onDeleteChat) {
+                onDeleteChat(chatId);
+            } else if (activeChatId === chatId) {
+                navigate('/chats');
             }
         } catch (err) {
-            console.error('Failed to toggle pin:', err);
+            console.error('Error deleting chat session:', err);
         }
     };
 
-    const handleRenameChat = async (id: string, newTitle: string) => {
-        const clean = newTitle.trim();
-        if (!clean) {
+    const togglePin = async (chatId: string, e?: React.MouseEvent) => {
+        if (e) e.stopPropagation();
+        setOpenMenuChatId(null);
+        const chat = chats.find((c) => c.id === chatId);
+        if (!chat) return;
+
+        const isPinned = Boolean(chat.is_pinned ?? chat.isPinned);
+        const newPinned = !isPinned;
+        setChats((prev) =>
+            prev.map((c) => (c.id === chatId ? { ...c, is_pinned: newPinned, isPinned: newPinned } : c))
+        );
+
+        try {
+            await chatService.togglePinChat(chatId);
+        } catch (err) {
+            console.error('Error pinning chat:', err);
+            setChats((prev) =>
+                prev.map((c) => (c.id === chatId ? { ...c, is_pinned: isPinned, isPinned: isPinned } : c))
+            );
+        }
+    };
+
+    const handleRenameChat = async (chatId: string, newTitle: string) => {
+        const trimmed = newTitle.trim();
+        if (!trimmed) {
             setEditingChatId(null);
             return;
         }
-        try {
-            const res = await fetch(`/api/chats/${id}/rename`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ title: clean }),
-            });
-            if (res.ok) {
-                setChats((prev) =>
-                    prev.map((c) => (c.id === id ? { ...c, title: clean } : c))
-                );
-            }
-        } catch (err) {
-            console.error('Failed to rename chat:', err);
-        } finally {
-            setEditingChatId(null);
-        }
-    };
 
-    const deleteChat = async (id: string, e: React.MouseEvent) => {
-        e.stopPropagation();
+        const originalChat = chats.find((c) => c.id === chatId);
+        const originalTitle = originalChat?.title || '';
+
+        setChats((prev) =>
+            prev.map((c) => (c.id === chatId ? { ...c, title: trimmed } : c))
+        );
+        setEditingChatId(null);
+
         try {
-            const res = await fetch(`/api/chats/${id}`, { method: 'DELETE' });
-            if (res.ok) {
-                setChats((prev) => prev.filter((c) => c.id !== id));
-                if (onDeleteChat) {
-                    onDeleteChat(id);
-                } else if (activeChatId === id) {
-                    navigate('/chats');
-                }
-            }
+            await chatService.renameChat(chatId, trimmed);
         } catch (err) {
-            console.error('Failed to delete chat:', err);
+            console.error('Error renaming chat:', err);
+            setChats((prev) =>
+                prev.map((c) => (c.id === chatId ? { ...c, title: originalTitle } : c))
+            );
         }
     };
 
     const handleClearAllChats = async () => {
         try {
-            const res = await fetch('/api/chats', { method: 'DELETE' });
-            if (res.ok) {
-                setChats([]);
-                if (activeChatId) {
-                    navigate('/chats');
-                }
-            } else {
-                throw new Error('Failed to clear chats');
-            }
+            await chatService.clearAllChats();
+            setChats([]);
+            setIsSettingsOpen(false);
+            navigate('/chats');
+            return true;
         } catch (err) {
-            console.error('Error clearing chats in Sidebar:', err);
-            throw err;
+            console.error('Error clearing all chats:', err);
+            return false;
         }
     };
 
-    const pinnedChats = chats.filter((c) => c.isPinned);
-    const unpinnedChats = chats.filter((c) => !c.isPinned);
+    const pinnedChats = chats.filter((c) => Boolean(c.is_pinned ?? c.isPinned));
+    const unpinnedChats = chats.filter((c) => !(c.is_pinned ?? c.isPinned));
 
     return (
         <>
+            {/* Search Modal */}
+            <SearchModal
+                isOpen={isSearchOpen}
+                onClose={() => setIsSearchOpen(false)}
+                chats={chats}
+                onSelectChat={(chatId) => {
+                    handleSelectChat(chatId);
+                    setIsSearchOpen(false);
+                }}
+            />
+
+            {/* Settings Modal */}
             <SettingsModal
                 isOpen={isSettingsOpen}
                 onClose={() => setIsSettingsOpen(false)}
@@ -220,28 +219,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 activeChatId={activeChatId}
             />
 
-            <SearchModal
-                isOpen={isSearchOpen}
-                onClose={() => setIsSearchOpen(false)}
-                chats={chats}
-                onSelectChat={handleSelectChat}
-            />
-
             <aside
                 className={`sidebar ${isSidebarOpen ? 'w-64 sm:w-72' : 'w-14'
-                    } relative z-20 shrink-0 h-full border-r border-slate-200 flex flex-col justify-between select-none transition-[width] duration-300 ease-in-out overflow-hidden bg-white`}
+                    } relative z-20 shrink-0 h-full border-r border-slate-200 dark:border-slate-800 flex flex-col justify-between select-none transition-[width] duration-300 ease-in-out overflow-hidden bg-white dark:bg-slate-900`}
             >
-                {/* Scroll container starts from top of sidebar (header level) */}
+                {/* Scroll container */}
                 <div
                     onScroll={(e) => setIsScrolled(e.currentTarget.scrollTop > 0)}
                     className="flex-1 overflow-y-auto overflow-x-hidden min-h-0 flex flex-col"
                 >
-                    {/* Header Row: Logo & Action Icons & New Chat (Sticky at top, border only when scrolled) */}
+                    {/* Header Row */}
                     <div
-                        className={`header px-2.5 sticky top-0 z-10 bg-white shrink-0 transition-colors duration-150 ${isScrolled ? 'border-b border-slate-200' : 'border-b border-transparent'
+                        className={`header space-y-1.5 px-2.5 pt-2.5 sticky top-0 z-10 bg-white dark:bg-slate-900 shrink-0 transition-colors duration-150 ${isScrolled ? 'border-b border-slate-200 dark:border-slate-800' : 'border-b border-transparent'
                             }`}
                     >
-                        <div className="flex items-center justify-between h-14 px-2.5">
+                        {/* Logo */}
+                        <div className={`flex items-center justify-between ${isSidebarOpen ? "pl-2.5" : "px-2.5"}`}>
                             {isSidebarOpen ? (
                                 <>
                                     <Link
@@ -249,7 +242,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                         onClick={handleNewChat}
                                         className="logo flex items-center min-w-0"
                                     >
-                                        <span className="text-xl font-bold tracking-tight text-indigo-600 whitespace-nowrap">
+                                        <span className="text-xl font-bold tracking-tight text-indigo-600 dark:text-indigo-400 whitespace-nowrap">
                                             Evidentia.
                                         </span>
                                     </Link>
@@ -261,7 +254,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                             onClick={() => setIsSearchOpen(true)}
                                             title="Tìm kiếm"
                                         >
-                                            <Search className="w-4 h-4 text-slate-800" />
+                                            <Search className="w-4 h-4 text-slate-800 dark:text-slate-200" />
                                         </Button>
                                         <Button
                                             variant="icon"
@@ -269,7 +262,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                             onClick={() => setIsSidebarOpen(false)}
                                             title="Thu nhỏ sidebar"
                                         >
-                                            <PanelLeft className="w-4 h-4 text-slate-800" />
+                                            <PanelLeft className="w-4 h-4 text-slate-800 dark:text-slate-200" />
                                         </Button>
                                     </div>
                                 </>
@@ -280,19 +273,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                         size="sm"
                                         onClick={() => setIsSidebarOpen(true)}
                                         title="Mở rộng sidebar"
+                                        className="group"
                                     >
-                                        <PanelLeft className="w-4 h-4 text-slate-800" />
+                                        <Sparkle className="w-4 h-4 text-indigo-600 dark:text-indigo-400 group-hover:hidden" />
+                                        <PanelLeft className="w-4 h-4 text-slate-800 dark:text-slate-200 hidden group-hover:block" />
                                     </Button>
                                 </div>
                             )}
                         </div>
 
+                        {/* New Chat Button */}
                         <div className="mb-1">
                             <button
                                 onClick={handleNewChat}
                                 className={`w-full h-9 flex items-center gap-1 text-sm ${activeNav === 'chat' && !activeChatId
-                                    ? 'bg-slate-200/80 text-slate-900'
-                                    : 'text-slate-800 hover:bg-slate-200/80'
+                                        ? 'bg-slate-200/80 dark:bg-slate-800 text-slate-900 dark:text-white font-medium'
+                                        : 'text-slate-800 dark:text-slate-200 hover:bg-slate-200/80 dark:hover:bg-slate-800'
                                     } rounded-lg cursor-pointer transition-colors`}
                                 title="Đoạn chat mới"
                             >
@@ -316,8 +312,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                             <button
                                 onClick={() => navigate('/laws')}
                                 className={`w-full h-9 flex items-center gap-1 text-sm ${activeNav === 'laws'
-                                    ? 'bg-slate-200/80'
-                                    : 'text-slate-800 hover:bg-slate-200/80'
+                                        ? 'bg-slate-200/80 dark:bg-slate-800 text-slate-900 dark:text-white font-medium'
+                                        : 'text-slate-800 dark:text-slate-200 hover:bg-slate-200/80 dark:hover:bg-slate-800'
                                     } rounded-lg cursor-pointer transition-colors`}
                                 title="Danh sách luật"
                             >
@@ -334,7 +330,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
                             <button
                                 onClick={() => navigate('/achieves')}
-                                className="w-full h-9 flex items-center gap-1 text-sm text-slate-800 hover:bg-slate-200/80 rounded-lg cursor-pointer transition-colors"
+                                className="w-full h-9 flex items-center gap-1 text-sm text-slate-800 dark:text-slate-200 hover:bg-slate-200/80 dark:hover:bg-slate-800 rounded-lg cursor-pointer transition-colors"
                                 title="Kho lưu trữ chat"
                             >
                                 <div className="w-9 h-9 flex items-center justify-center shrink-0">
@@ -355,7 +351,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                     <button
                                         type="button"
                                         onClick={() => setIsPinnedExpanded((prev) => !prev)}
-                                        className="flex items-center gap-1.5 text-sm font-semibold text-gray-900/50 hover:text-gray-900/80 tracking-wider transition-colors cursor-pointer select-none group"
+                                        className="flex items-center gap-1.5 text-sm font-semibold text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 tracking-wider transition-colors cursor-pointer select-none group"
                                         title={isPinnedExpanded ? 'Thu gọn chat được ghim' : 'Mở rộng chat được ghim'}
                                     >
                                         <span
@@ -374,117 +370,30 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                 {isPinnedExpanded && (
                                     <div className="space-y-1">
                                         {pinnedChats.map((item) => (
-                                            <div
+                                            <SidebarChatItem
                                                 key={`pinned-${item.id}`}
-                                                onClick={() => handleSelectChat(item.id)}
-                                                className={`group relative flex items-center justify-between px-2.5 py-2 rounded-lg cursor-pointer select-none transition-colors w-full text-left text-sm text-slate-900 ${activeChatId === item.id
-                                                    ? 'bg-slate-200'
-                                                    : 'bg-transparent hover:bg-slate-200/80'
-                                                    }`}
-                                            >
-                                                <div
-                                                    className={`flex flex-col text-left flex-1 min-w-0 pr-1.5 transition-opacity duration-200 ${isSidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
-                                                        }`}
-                                                >
-                                                    {editingChatId === item.id ? (
-                                                        <input
-                                                            type="text"
-                                                            autoFocus
-                                                            value={editingTitle}
-                                                            onChange={(e) => setEditingTitle(e.target.value)}
-                                                            onClick={(e) => e.stopPropagation()}
-                                                            onKeyDown={(e) => {
-                                                                if (e.key === 'Enter') {
-                                                                    handleRenameChat(item.id, editingTitle);
-                                                                } else if (e.key === 'Escape') {
-                                                                    setEditingChatId(null);
-                                                                }
-                                                            }}
-                                                            onBlur={() => handleRenameChat(item.id, editingTitle)}
-                                                            className="w-full bg-white border border-indigo-400 rounded px-1.5 py-0.5 text-xs text-slate-900 focus:outline-none focus:ring-1 focus:ring-indigo-500 shadow-xs"
-                                                        />
-                                                    ) : (
-                                                        <ScrollableText
-                                                            text={item.title}
-                                                            className="text-sm text-slate-900 font-normal whitespace-nowrap"
-                                                        />
-                                                    )}
-                                                </div>
-
-                                                <div className="relative flex items-center shrink-0">
-                                                    <button
-                                                        type="button"
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            setOpenMenuChatId(
-                                                                openMenuChatId === item.id ? null : item.id
-                                                            );
-                                                        }}
-                                                        className={`p-1 rounded text-slate-900 transition-opacity ${openMenuChatId === item.id
-                                                            ? 'opacity-100'
-                                                            : 'opacity-0 group-hover:opacity-100'
-                                                            }`}
-                                                        title="Tùy chọn đoạn chat"
-                                                    >
-                                                        <MoreHorizontal className="w-4 h-4" />
-                                                    </button>
-
-                                                    {openMenuChatId === item.id && (
-                                                        <>
-                                                            <div
-                                                                className="fixed inset-0 z-40"
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    setOpenMenuChatId(null);
-                                                                }}
-                                                            />
-                                                            <div
-                                                                onClick={(e) => e.stopPropagation()}
-                                                                className="absolute -right-3 top-9 mt-1 w-44 bg-white rounded-xl border border-slate-200 shadow-xl p-1.5 z-50 space-y-0.5 select-none"
-                                                            >
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={(e) => {
-                                                                        togglePin(item.id, e);
-                                                                        setOpenMenuChatId(null);
-                                                                    }}
-                                                                    className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg text-left cursor-pointer transition-colors"
-                                                                >
-                                                                    <PinOff className="w-4 h-4 text-slate-500 shrink-0" />
-                                                                    <span>Bỏ ghim</span>
-                                                                </button>
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        setEditingChatId(item.id);
-                                                                        setEditingTitle(item.title);
-                                                                        setOpenMenuChatId(null);
-                                                                    }}
-                                                                    className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg text-left cursor-pointer transition-colors"
-                                                                >
-                                                                    <Pencil className="w-4 h-4 text-slate-500 shrink-0" />
-                                                                    <span>Đổi tên</span>
-                                                                </button>
-
-                                                                <div className="h-px bg-slate-100 my-0.5" />
-
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={(e) => {
-                                                                        deleteChat(item.id, e);
-                                                                        setOpenMenuChatId(null);
-                                                                    }}
-                                                                    className="w-full flex items-center gap-2.5 px-3 py-2 text-sm hover:bg-red-100 rounded-lg text-left cursor-pointer text-red-500 transition-colors"
-                                                                >
-                                                                    <Trash2 className="w-4 h-4 text-red-500 shrink-0" />
-                                                                    <span>Xóa đoạn chat</span>
-                                                                </button>
-                                                            </div>
-                                                        </>
-                                                    )}
-                                                </div>
-                                            </div>
+                                                item={item}
+                                                isActive={activeChatId === item.id}
+                                                isSidebarOpen={isSidebarOpen}
+                                                isEditing={editingChatId === item.id}
+                                                editingTitle={editingTitle}
+                                                isMenuOpen={openMenuChatId === item.id}
+                                                onSelect={() => handleSelectChat(item.id)}
+                                                onStartEditing={() => {
+                                                    setEditingChatId(item.id);
+                                                    setEditingTitle(item.title);
+                                                }}
+                                                onEditingTitleChange={setEditingTitle}
+                                                onSaveRename={(newTitle) => handleRenameChat(item.id, newTitle)}
+                                                onCancelRename={() => setEditingChatId(null)}
+                                                onToggleMenu={(e) => {
+                                                    e.stopPropagation();
+                                                    setOpenMenuChatId(openMenuChatId === item.id ? null : item.id);
+                                                }}
+                                                onCloseMenu={() => setOpenMenuChatId(null)}
+                                                onTogglePin={(e) => togglePin(item.id, e)}
+                                                onDelete={(e) => deleteChat(item.id, e)}
+                                            />
                                         ))}
                                     </div>
                                 )}
@@ -497,7 +406,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                     <button
                                         type="button"
                                         onClick={() => setIsHistoryExpanded((prev) => !prev)}
-                                        className="flex items-center gap-1.5 text-sm font-semibold text-gray-900/50 hover:text-gray-900/80 tracking-wider transition-colors cursor-pointer select-none group"
+                                        className="flex items-center gap-1.5 text-sm font-semibold text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 tracking-wider transition-colors cursor-pointer select-none group"
                                         title={isHistoryExpanded ? 'Thu gọn lịch sử chat' : 'Mở rộng lịch sử chat'}
                                     >
                                         <span
@@ -516,118 +425,30 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                 {isHistoryExpanded && (
                                     <div className="space-y-1">
                                         {unpinnedChats.map((item) => (
-                                            <div
+                                            <SidebarChatItem
                                                 key={item.id}
-                                                onClick={() => handleSelectChat(item.id)}
-                                                className={`group relative flex items-center justify-between px-2.5 py-2 rounded-lg cursor-pointer select-none transition-colors w-full text-left text-sm text-slate-900 ${activeChatId === item.id
-                                                    ? 'bg-slate-200'
-                                                    : 'bg-transparent hover:bg-slate-200/80'
-                                                    }`}
-                                            >
-                                                <div
-                                                    className={`flex flex-col text-left flex-1 min-w-0 pr-1.5 transition-opacity duration-200 ${isSidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
-                                                        }`}
-                                                >
-                                                    {editingChatId === item.id ? (
-                                                        <input
-                                                            type="text"
-                                                            autoFocus
-                                                            value={editingTitle}
-                                                            onChange={(e) => setEditingTitle(e.target.value)}
-                                                            onClick={(e) => e.stopPropagation()}
-                                                            onKeyDown={(e) => {
-                                                                if (e.key === 'Enter') {
-                                                                    handleRenameChat(item.id, editingTitle);
-                                                                } else if (e.key === 'Escape') {
-                                                                    setEditingChatId(null);
-                                                                }
-                                                            }}
-                                                            onBlur={() => handleRenameChat(item.id, editingTitle)}
-                                                            className="w-full bg-white border border-indigo-400 rounded px-1.5 py-0.5 text-xs text-slate-900 focus:outline-none focus:ring-1 focus:ring-indigo-500 shadow-xs"
-                                                        />
-                                                    ) : (
-                                                        <ScrollableText
-                                                            text={item.title}
-                                                            className="text-sm text-slate-900 font-normal whitespace-nowrap"
-                                                        />
-                                                    )}
-                                                </div>
-
-                                                <div className="relative flex items-center shrink-0">
-                                                    <button
-                                                        type="button"
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            setOpenMenuChatId(
-                                                                openMenuChatId === item.id ? null : item.id
-                                                            );
-                                                        }}
-                                                        className={`p-1 rounded text-slate-900 transition-opacity ${openMenuChatId === item.id
-                                                            ? 'opacity-100'
-                                                            : 'opacity-0 group-hover:opacity-100'
-                                                            }`}
-                                                        title="Tùy chọn đoạn chat"
-                                                    >
-                                                        <MoreHorizontal className="w-4 h-4" />
-                                                    </button>
-
-                                                    {openMenuChatId === item.id && (
-                                                        <>
-                                                            <div
-                                                                className="fixed inset-0 z-40"
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    setOpenMenuChatId(null);
-                                                                }}
-                                                            />
-                                                            <div
-                                                                onClick={(e) => e.stopPropagation()}
-                                                                className="absolute -right-3 top-9 mt-1 w-44 bg-white rounded-xl border border-slate-200 shadow-xl p-1.5 z-50 space-y-0.5 select-none"
-                                                            >
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={(e) => {
-                                                                        togglePin(item.id, e);
-                                                                        setOpenMenuChatId(null);
-                                                                    }}
-                                                                    className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg text-left cursor-pointer transition-colors"
-                                                                >
-                                                                    <Pin className="w-4 h-4 text-slate-500 shrink-0" />
-                                                                    <span>Ghim</span>
-                                                                </button>
-
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        setEditingChatId(item.id);
-                                                                        setEditingTitle(item.title);
-                                                                        setOpenMenuChatId(null);
-                                                                    }}
-                                                                    className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg text-left cursor-pointer transition-colors"
-                                                                >
-                                                                    <Pencil className="w-4 h-4 text-slate-500 shrink-0" />
-                                                                    <span>Đổi tên</span>
-                                                                </button>
-
-                                                                <div className="h-px bg-slate-100 my-0.5" />
-
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={(e) => {
-                                                                        deleteChat(item.id, e);
-                                                                        setOpenMenuChatId(null);
-                                                                    }}
-                                                                    className="w-full flex items-center gap-2.5 px-3 py-2 text-sm hover:bg-red-100 rounded-lg text-left cursor-pointer text-red-500 transition-colors"
-                                                                >
-                                                                    <Trash2 className="w-4 h-4 text-red-500 shrink-0" />
-                                                                    <span>Xóa đoạn chat</span>
-                                                                </button>
-                                                            </div>
-                                                        </>
-                                                    )}
-                                                </div>
-                                            </div>
+                                                item={item}
+                                                isActive={activeChatId === item.id}
+                                                isSidebarOpen={isSidebarOpen}
+                                                isEditing={editingChatId === item.id}
+                                                editingTitle={editingTitle}
+                                                isMenuOpen={openMenuChatId === item.id}
+                                                onSelect={() => handleSelectChat(item.id)}
+                                                onStartEditing={() => {
+                                                    setEditingChatId(item.id);
+                                                    setEditingTitle(item.title);
+                                                }}
+                                                onEditingTitleChange={setEditingTitle}
+                                                onSaveRename={(newTitle) => handleRenameChat(item.id, newTitle)}
+                                                onCancelRename={() => setEditingChatId(null)}
+                                                onToggleMenu={(e) => {
+                                                    e.stopPropagation();
+                                                    setOpenMenuChatId(openMenuChatId === item.id ? null : item.id);
+                                                }}
+                                                onCloseMenu={() => setOpenMenuChatId(null)}
+                                                onTogglePin={(e) => togglePin(item.id, e)}
+                                                onDelete={(e) => deleteChat(item.id, e)}
+                                            />
                                         ))}
                                     </div>
                                 )}
@@ -636,7 +457,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     </div>
                 </div>
 
-                <div className="h-17 p-2.5 flex items-center relative shrink-0 border-t border-slate-200">
+                {/* Profile Footer */}
+                <div className="h-17 p-2.5 flex items-center relative shrink-0 border-t border-slate-200 dark:border-slate-800">
                     {isProfileMenuOpen && (
                         <>
                             <div
@@ -646,15 +468,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
                             <div
                                 className={
                                     isSidebarOpen
-                                        ? 'absolute bottom-full left-2 right-2 mb-2 bg-white rounded-xl border border-slate-200 shadow-xl p-1.5 space-y-0.5 z-50 select-none'
-                                        : 'fixed bottom-16 left-3 w-56 bg-white rounded-xl border border-slate-200 shadow-xl p-1.5 space-y-0.5 z-50 select-none'
+                                        ? 'absolute bottom-full left-2 right-2 mb-2 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xl p-1.5 space-y-0.5 z-50 select-none'
+                                        : 'fixed bottom-16 left-3 w-56 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xl p-1.5 space-y-0.5 z-50 select-none'
                                 }
                             >
                                 <button
                                     onClick={() => setIsProfileMenuOpen(false)}
-                                    className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg text-left cursor-pointer transition-colors"
+                                    className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-left cursor-pointer transition-colors"
                                 >
-                                    <Sparkles className="w-4 h-4 text-indigo-600 shrink-0" />
+                                    <Sparkles className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
                                     <span className="font-medium">Nâng cấp gói Pro</span>
                                 </button>
                                 <button
@@ -662,15 +484,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                         setIsProfileMenuOpen(false);
                                         setIsSettingsOpen(true);
                                     }}
-                                    className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg text-left cursor-pointer transition-colors"
+                                    className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-left cursor-pointer transition-colors"
                                 >
-                                    <Settings className="w-4 h-4 text-slate-500 shrink-0" />
+                                    <Settings className="w-4 h-4 text-slate-500 dark:text-slate-400 shrink-0" />
                                     <span>Cài đặt & Tùy chọn</span>
                                 </button>
-                                <div className="h-px bg-slate-100 my-1" />
+                                <div className="h-px bg-slate-100 dark:bg-slate-800 my-1" />
                                 <button
                                     onClick={() => setIsProfileMenuOpen(false)}
-                                    className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg text-left cursor-pointer transition-colors"
+                                    className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg text-left cursor-pointer transition-colors"
                                 >
                                     <LogOut className="w-4 h-4 shrink-0" />
                                     <span>Đăng xuất</span>
@@ -681,7 +503,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
                     <button
                         onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
-                        className={`w-full h-full flex items-center gap-2.5 px-1 hover:bg-slate-200/80 rounded-lg text-left cursor-pointer transition-colors group`}
+                        className="w-full h-full flex items-center gap-2.5 px-1 hover:bg-slate-200/80 dark:hover:bg-slate-800 rounded-lg text-left cursor-pointer transition-colors group"
                         title="Tài khoản: Nguyễn Quang Huy"
                     >
                         <div className="w-7 h-7 rounded-full bg-indigo-600 text-white font-semibold text-xs flex items-center justify-center shrink-0 shadow-xs">
@@ -691,16 +513,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
                             className={`min-w-0 transition-opacity duration-200 ${isSidebarOpen ? 'opacity-100' : 'hidden'
                                 }`}
                         >
-                            <p className="text-sm font-semibold text-slate-900 truncate leading-tight whitespace-nowrap">
+                            <p className="text-sm font-semibold text-slate-900 dark:text-white truncate leading-tight whitespace-nowrap">
                                 Nguyễn Quang Huy
                             </p>
-                            <p className="text-xs text-slate-400 truncate mt-0.5 whitespace-nowrap">
+                            <p className="text-xs text-slate-400 dark:text-slate-500 truncate mt-0.5 whitespace-nowrap">
                                 huy.nguyen@evidentia.vn
                             </p>
                         </div>
                     </button>
                 </div>
-            </aside >
+            </aside>
         </>
     );
 };

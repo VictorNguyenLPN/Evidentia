@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { ChatProvider } from './contexts/ChatContext';
+import { ChatProvider } from './contexts';
 import MainLayout from './layouts/MainLayout';
 import LandingPage from './pages/LandingPage';
 import ChatPage from './pages/ChatPage';
