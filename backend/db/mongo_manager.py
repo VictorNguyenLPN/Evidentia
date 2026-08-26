@@ -213,7 +213,8 @@ class MongoManager:
         target_date: Optional[str] = None,
         analysis: Optional[Dict[str, Any]] = None,
         citations: Optional[List[Dict[str, Any]]] = None,
-        steps: Optional[List[Dict[str, Any]]] = None
+        steps: Optional[List[Dict[str, Any]]] = None,
+        token_usage: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         """
         Save or update a chat session with the user prompt and assistant reply.
@@ -241,7 +242,8 @@ class MongoManager:
             "targetDate": target_date,
             "analysis": analysis or {},
             "citations": citations or [],
-            "steps": steps or []
+            "steps": steps or [],
+            "token_usage": token_usage or {}
         }
 
         domain = (analysis or {}).get("domain") or "Pháp luật"
@@ -352,6 +354,25 @@ class MongoManager:
                 logger.error(f"Error deleting chat {chat_id}: {e}")
 
         return found
+
+    def clear_all_chats(self) -> int:
+        """
+        Delete all chat sessions from MongoDB and fallback memory.
+        Returns the number of deleted chats.
+        """
+        deleted_count = len(self._fallback_chats)
+        self._fallback_chats.clear()
+
+        col = self.get_chats_collection()
+        if col is not None:
+            try:
+                res = col.delete_many({})
+                deleted_count = max(deleted_count, res.deleted_count)
+            except Exception as e:
+                logger.error(f"Error clearing all chats from MongoDB: {e}")
+
+        return deleted_count
+
 
     def rename_chat(self, chat_id: str, new_title: str) -> bool:
         """
@@ -747,13 +768,21 @@ class MongoManager:
         laws_col = self.get_laws_collection()
         if laws_col is not None:
             try:
-                doc = laws_col.find_one({"document_id": document_id}, {"_id": 0})
+                doc = laws_col.find_one(
+                    {"$or": [{"document_id": document_id}, {"doc_identity": document_id}]},
+                    {"_id": 0}
+                )
                 if doc:
                     return doc
             except Exception as e:
                 logger.error(f"Error fetching law {document_id} from MongoDB: {e}")
 
-        return self._fallback_laws.get(document_id)
+        if document_id in self._fallback_laws:
+            return self._fallback_laws[document_id]
+        for d in self._fallback_laws.values():
+            if d.get("doc_identity") == document_id:
+                return d
+        return None
 
     def get_law_articles(
         self,
@@ -774,7 +803,8 @@ class MongoManager:
         articles_col = self.get_articles_collection()
         if articles_col is not None:
             try:
-                query: Dict[str, Any] = {"document_id": document_id}
+                doc_query = {"$or": [{"document_id": document_id}, {"doc_identity": document_id}]}
+                query: Dict[str, Any] = {**doc_query}
                 if chapter_number:
                     query["chapter_number"] = str(chapter_number)
 
@@ -814,6 +844,11 @@ class MongoManager:
 
         # Fallback in-memory search & pagination
         all_arts = self._fallback_articles.get(document_id, [])
+        if not all_arts:
+            for d_id, arts in self._fallback_articles.items():
+                if any(a.get("doc_identity") == document_id for a in arts):
+                    all_arts = arts
+                    break
         filtered = all_arts
         if chapter_number:
             filtered = [a for a in filtered if str(a.get("chapter_number")) == str(chapter_number)]
@@ -848,13 +883,16 @@ class MongoManager:
 
     def get_law_article(self, document_id: str, article_number: int) -> Optional[Dict[str, Any]]:
         """
-        Retrieve a single specific article by document_id and article_number.
+        Retrieve a single specific article by document_id/doc_identity and article_number.
         """
         articles_col = self.get_articles_collection()
         if articles_col is not None:
             try:
                 doc = articles_col.find_one(
-                    {"document_id": document_id, "article_number": int(article_number)},
+                    {
+                        "$or": [{"document_id": document_id}, {"doc_identity": document_id}],
+                        "article_number": int(article_number)
+                    },
                     {"_id": 0}
                 )
                 if doc:
@@ -862,9 +900,10 @@ class MongoManager:
             except Exception as e:
                 logger.error(f"Error fetching article {article_number} for {document_id}: {e}")
 
-        for a in self._fallback_articles.get(document_id, []):
-            if a.get("article_number") == int(article_number):
-                return a
+        for k, art_list in self._fallback_articles.items():
+            for a in art_list:
+                if (a.get("document_id") == document_id or a.get("doc_identity") == document_id) and a.get("article_number") == int(article_number):
+                    return a
         return None
 
 # Singleton instance

@@ -167,6 +167,7 @@ class ChatResponse(BaseModel):
     analysis: Dict[str, Any]
     citations: List[Dict[str, Any]]
     steps: List[Dict[str, Any]]
+    token_usage: Optional[Dict[str, Any]] = None
     chat_id: Optional[str] = None
     title: Optional[str] = None
     tag: Optional[str] = None
@@ -243,6 +244,14 @@ def toggle_chat_pin(chat_id: str):
 
 class RenameChatRequest(BaseModel):
     title: str = Field(..., min_length=1, max_length=255, description="New title for chat session")
+
+@app.delete("/api/chats")
+def clear_all_chats_endpoint():
+    """
+    Clear all chat sessions from MongoDB and memory.
+    """
+    deleted_count = mongo_manager.clear_all_chats()
+    return {"success": True, "deleted_count": deleted_count}
 
 @app.delete("/api/chats/{chat_id}")
 def delete_chat_session(chat_id: str):
@@ -350,7 +359,8 @@ def chat_endpoint(payload: ChatRequest):
             target_date=payload.target_date,
             analysis=response_data.get("analysis"),
             citations=response_data.get("citations"),
-            steps=response_data.get("steps")
+            steps=response_data.get("steps"),
+            token_usage=response_data.get("token_usage")
         )
         
         response_data["chat_id"] = save_res.get("chat_id")
@@ -396,7 +406,8 @@ def chat_stream_endpoint(payload: ChatRequest):
                         target_date=payload.target_date,
                         analysis=event.get("analysis"),
                         citations=event.get("citations"),
-                        steps=event.get("steps")
+                        steps=event.get("steps"),
+                        token_usage=event.get("token_usage")
                     )
                     event["chat_id"] = save_res.get("chat_id")
                     event["title"] = save_res.get("title")
