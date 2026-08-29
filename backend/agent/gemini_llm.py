@@ -26,6 +26,10 @@ class GeminiLLMClient:
     def is_configured(self) -> bool:
         return bool(self.api_key)
 
+    def is_ready(self) -> bool:
+        return bool(self.api_key)
+
+
     def _init_client(self):
         if not self.api_key:
             raise ValueError(

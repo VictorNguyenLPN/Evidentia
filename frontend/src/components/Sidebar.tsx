@@ -9,15 +9,17 @@ import {
     Settings,
     LogOut,
     Sparkle,
-    Sparkles,
     ChevronDown,
+    LogIn,
+    User as UserIcon,
 } from 'lucide-react';
 import Button from './Button';
-import SettingsModal from './SettingsModal';
+import SettingsModal, { type SettingsSection } from './SettingsModal';
 import SearchModal from './SearchModal';
 import SidebarChatItem from './SidebarChatItem';
 import type { ChatSession } from '../types';
 import { chatService } from '../services';
+import { useAuth } from '../contexts';
 
 export type { ChatSession };
 
@@ -62,11 +64,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
     const chats = controlledChats !== undefined ? controlledChats : internalChats;
     const setChats = controlledSetChats || setInternalChats;
 
+    const { user, isAuthenticated, logout, openAuthModal } = useAuth();
     const [openMenuChatId, setOpenMenuChatId] = useState<string | null>(null);
     const [editingChatId, setEditingChatId] = useState<string | null>(null);
     const [editingTitle, setEditingTitle] = useState<string>('');
     const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+    const [settingsInitialSection, setSettingsInitialSection] = useState<SettingsSection>('general');
     const [isPinnedExpanded, setIsPinnedExpanded] = useState(true);
     const [isHistoryExpanded, setIsHistoryExpanded] = useState(true);
     const [isScrolled, setIsScrolled] = useState(false);
@@ -217,6 +221,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 chats={chats}
                 onClearAllChats={handleClearAllChats}
                 activeChatId={activeChatId}
+                initialSection={settingsInitialSection}
             />
 
             <aside
@@ -459,68 +464,107 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
                 {/* Profile Footer */}
                 <div className="h-17 p-2.5 flex items-center relative shrink-0 border-t border-slate-200 dark:border-slate-800">
-                    {isProfileMenuOpen && (
+                    {isAuthenticated && user ? (
                         <>
-                            <div
-                                className="fixed inset-0 z-40"
-                                onClick={() => setIsProfileMenuOpen(false)}
-                            />
-                            <div
-                                className={
-                                    isSidebarOpen
-                                        ? 'absolute bottom-full left-2 right-2 mb-2 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xl p-1.5 space-y-0.5 z-50 select-none'
-                                        : 'fixed bottom-16 left-3 w-56 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xl p-1.5 space-y-0.5 z-50 select-none'
-                                }
-                            >
-                                <button
-                                    onClick={() => setIsProfileMenuOpen(false)}
-                                    className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-left cursor-pointer transition-colors"
-                                >
-                                    <Sparkles className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
-                                    <span className="font-medium">Nâng cấp gói Pro</span>
-                                </button>
-                                <button
-                                    onClick={() => {
-                                        setIsProfileMenuOpen(false);
-                                        setIsSettingsOpen(true);
-                                    }}
-                                    className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-left cursor-pointer transition-colors"
-                                >
-                                    <Settings className="w-4 h-4 text-slate-500 dark:text-slate-400 shrink-0" />
-                                    <span>Cài đặt & Tùy chọn</span>
-                                </button>
-                                <div className="h-px bg-slate-100 dark:bg-slate-800 my-1" />
-                                <button
-                                    onClick={() => setIsProfileMenuOpen(false)}
-                                    className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg text-left cursor-pointer transition-colors"
-                                >
-                                    <LogOut className="w-4 h-4 shrink-0" />
-                                    <span>Đăng xuất</span>
-                                </button>
-                            </div>
-                        </>
-                    )}
+                            {isProfileMenuOpen && (
+                                <>
+                                    <div
+                                        className="fixed inset-0 z-40"
+                                        onClick={() => setIsProfileMenuOpen(false)}
+                                    />
+                                    <div
+                                        className={
+                                            isSidebarOpen
+                                                ? 'absolute bottom-full left-2 right-2 mb-2 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xl p-1.5 space-y-0.5 z-50 select-none'
+                                                : 'fixed bottom-16 left-3 w-56 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xl p-1.5 space-y-0.5 z-50 select-none'
+                                        }
+                                    >
+                                        <div className="px-3 py-2 border-b border-slate-100 dark:border-slate-800 mb-1">
+                                            <p className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                                                {user.full_name}
+                                            </p>
+                                            <p className="text-[11px] text-slate-400 dark:text-slate-500 truncate">
+                                                {user.email}
+                                            </p>
+                                        </div>
+                                        <button
+                                            onClick={() => {
+                                                setIsProfileMenuOpen(false);
+                                                setSettingsInitialSection('account');
+                                                setIsSettingsOpen(true);
+                                            }}
+                                            className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-left cursor-pointer transition-colors"
+                                        >
+                                            <UserIcon className="w-4 h-4 text-slate-500 dark:text-slate-400 shrink-0" />
+                                            <span>Hồ sơ tài khoản</span>
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                setIsProfileMenuOpen(false);
+                                                setSettingsInitialSection('general');
+                                                setIsSettingsOpen(true);
+                                            }}
+                                            className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-left cursor-pointer transition-colors"
+                                        >
+                                            <Settings className="w-4 h-4 text-slate-500 dark:text-slate-400 shrink-0" />
+                                            <span>Cài đặt & Tùy chọn</span>
+                                        </button>
+                                        <div className="h-px bg-slate-100 dark:bg-slate-800 my-1" />
+                                        <button
+                                            onClick={() => {
+                                                setIsProfileMenuOpen(false);
+                                                logout();
+                                                navigate('/chats');
+                                            }}
+                                            className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg text-left cursor-pointer transition-colors"
+                                        >
+                                            <LogOut className="w-4 h-4 shrink-0" />
+                                            <span>Đăng xuất</span>
+                                        </button>
+                                    </div>
+                                </>
+                            )}
 
-                    <button
-                        onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
-                        className="w-full h-full flex items-center gap-2.5 px-1 hover:bg-slate-200/80 dark:hover:bg-slate-800 rounded-lg text-left cursor-pointer transition-colors group"
-                        title="Tài khoản: Nguyễn Quang Huy"
-                    >
-                        <div className="w-7 h-7 rounded-full bg-indigo-600 text-white font-semibold text-xs flex items-center justify-center shrink-0 shadow-xs">
-                            H
-                        </div>
-                        <div
-                            className={`min-w-0 transition-opacity duration-200 ${isSidebarOpen ? 'opacity-100' : 'hidden'
-                                }`}
-                        >
-                            <p className="text-sm font-semibold text-slate-900 dark:text-white truncate leading-tight whitespace-nowrap">
-                                Nguyễn Quang Huy
-                            </p>
-                            <p className="text-xs text-slate-400 dark:text-slate-500 truncate mt-0.5 whitespace-nowrap">
-                                huy.nguyen@evidentia.vn
-                            </p>
-                        </div>
-                    </button>
+                            <button
+                                onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
+                                className="w-full h-full flex items-center gap-2.5 px-1 hover:bg-slate-200/80 dark:hover:bg-slate-800 rounded-lg text-left cursor-pointer transition-colors group"
+                                title={`Tài khoản: ${user.full_name || user.email}`}
+                            >
+                                <div className="w-7 h-7 rounded-full bg-indigo-600 text-white font-semibold text-xs flex items-center justify-center shrink-0 shadow-xs">
+                                    {user.full_name?.charAt(0)?.toUpperCase() || user.email?.charAt(0)?.toUpperCase() || 'U'}
+                                </div>
+                                <div
+                                    className={`min-w-0 transition-opacity duration-200 ${isSidebarOpen ? 'opacity-100' : 'hidden'
+                                        }`}
+                                >
+                                    <p className="text-sm font-semibold text-slate-900 dark:text-white truncate leading-tight whitespace-nowrap">
+                                        {user.full_name}
+                                    </p>
+                                    <p className="text-xs text-slate-400 dark:text-slate-500 truncate mt-0.5 whitespace-nowrap">
+                                        {user.email}
+                                    </p>
+                                </div>
+                            </button>
+                        </>
+                    ) : (
+                        isSidebarOpen ? (
+                            <button
+                                onClick={() => openAuthModal('login')}
+                                className="w-full h-full flex items-center justify-center gap-2 px-3 py-2 bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 text-indigo-600 dark:text-indigo-400 font-semibold text-xs rounded-xl transition-all cursor-pointer shadow-xs"
+                            >
+                                <LogIn className="w-4 h-4" />
+                                <span>Đăng nhập / Đăng ký</span>
+                            </button>
+                        ) : (
+                            <button
+                                onClick={() => openAuthModal('login')}
+                                className="w-full h-full flex items-center justify-center text-indigo-600 dark:text-indigo-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
+                                title="Đăng nhập / Đăng ký"
+                            >
+                                <LogIn className="w-4 h-4" />
+                            </button>
+                        )
+                    )}
                 </div>
             </aside>
         </>

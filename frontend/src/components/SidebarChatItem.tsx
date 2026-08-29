@@ -82,7 +82,7 @@ export const SidebarChatItem: React.FC<SidebarChatItemProps> = ({
                     />
                 ) : (
                     <span
-                        className={`truncate text-sm transition-opacity duration-200 ${isSidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
+                        className={`pl-0.5 py-0.5 truncate text-sm transition-opacity duration-200 ${isSidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
                             }`}
                         title={item.title}
                     >

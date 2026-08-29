@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import type { ChatSession } from '../types';
-import { chatService } from '../services';
+import { chatService, authService } from '../services';
 import { ChatContext } from './chatContextInstance';
+import { useAuth } from './useAuth';
 
 // Temporarily disable all CSS transitions during theme switch to prevent patchy staggered animations
 const disableTransitionsDuringThemeSwitch = () => {
@@ -26,6 +27,7 @@ const disableTransitionsDuringThemeSwitch = () => {
 };
 
 export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+    const { token, user } = useAuth();
     const [chats, setChats] = useState<ChatSession[]>([]);
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
     const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -87,16 +89,27 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }, [isDarkMode]);
 
     const fetchChats = useCallback(async () => {
+        const currentToken = authService.getToken();
+        if (!currentToken) {
+            setChats([]);
+            return;
+        }
         try {
             const data = await chatService.getChats();
             setChats(data);
         } catch (err) {
             console.warn('Could not fetch chats:', err);
+            setChats([]);
         }
     }, []);
 
+    // Re-fetch chats whenever user logs in, out, or switches accounts
     useEffect(() => {
         let isMounted = true;
+        if (!token || !user?.id) {
+            setChats([]);
+            return;
+        }
         chatService.getChats()
             .then((data) => {
                 if (isMounted) {
@@ -104,13 +117,16 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 }
             })
             .catch((err) => {
-                console.warn('Could not fetch chats on init:', err);
+                console.warn('Could not fetch chats on init/auth change:', err);
+                if (isMounted) {
+                    setChats([]);
+                }
             });
 
         return () => {
             isMounted = false;
         };
-    }, []);
+    }, [token, user?.id]);
 
     return (
         <ChatContext.Provider

@@ -4,10 +4,15 @@ import type {
     ChatRequestPayload,
     ChatStreamEvent
 } from '../types';
+import { authService } from './authService';
 
 export const chatService = {
     async getChats(): Promise<ChatSession[]> {
-        const res = await fetch('/api/chats');
+        const res = await fetch('/api/chats', {
+            headers: {
+                ...authService.getAuthHeaders()
+            }
+        });
         if (!res.ok) {
             throw new Error(`Failed to fetch chats: ${res.statusText}`);
         }
@@ -16,9 +21,20 @@ export const chatService = {
     },
 
     async getChatById(chatId: string): Promise<ChatDocumentResponse | null> {
-        const res = await fetch(`/api/chats/${encodeURIComponent(chatId)}`);
+        const res = await fetch(`/api/chats/${encodeURIComponent(chatId)}`, {
+            headers: {
+                ...authService.getAuthHeaders()
+            }
+        });
         if (res.status === 404) {
             return null;
+        }
+        if (res.status === 403) {
+            return {
+                id: chatId,
+                is_private: true,
+                messages: []
+            };
         }
         if (!res.ok) {
             throw new Error(`Failed to fetch chat details: ${res.statusText}`);
@@ -26,9 +42,28 @@ export const chatService = {
         return res.json();
     },
 
+    async toggleShareChat(chatId: string, isShared: boolean): Promise<{ success: boolean; id: string; is_shared: boolean; shared_at?: string }> {
+        const res = await fetch(`/api/chats/${encodeURIComponent(chatId)}/share`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...authService.getAuthHeaders()
+            },
+            body: JSON.stringify({ is_shared: isShared })
+        });
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.detail || 'Không thể cập nhật trạng thái chia sẻ cuộc trò chuyện.');
+        }
+        return res.json();
+    },
+
     async togglePinChat(chatId: string): Promise<{ is_pinned: boolean }> {
         const res = await fetch(`/api/chats/${encodeURIComponent(chatId)}/pin`, {
             method: 'POST',
+            headers: {
+                ...authService.getAuthHeaders()
+            }
         });
         if (!res.ok) {
             throw new Error(`Failed to toggle pin: ${res.statusText}`);
@@ -39,7 +74,10 @@ export const chatService = {
     async renameChat(chatId: string, title: string): Promise<{ success: boolean; id: string; title: string }> {
         const res = await fetch(`/api/chats/${encodeURIComponent(chatId)}/rename`, {
             method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json',
+                ...authService.getAuthHeaders()
+            },
             body: JSON.stringify({ title }),
         });
         if (!res.ok) {
@@ -51,6 +89,9 @@ export const chatService = {
     async deleteChat(chatId: string): Promise<boolean> {
         const res = await fetch(`/api/chats/${encodeURIComponent(chatId)}`, {
             method: 'DELETE',
+            headers: {
+                ...authService.getAuthHeaders()
+            }
         });
         return res.ok;
     },
@@ -58,6 +99,9 @@ export const chatService = {
     async clearAllChats(): Promise<boolean> {
         const res = await fetch('/api/chats', {
             method: 'DELETE',
+            headers: {
+                ...authService.getAuthHeaders()
+            }
         });
         if (!res.ok) {
             throw new Error('Failed to clear all chats');
@@ -72,7 +116,10 @@ export const chatService = {
     ): Promise<void> {
         const res = await fetch('/api/chat/stream', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json',
+                ...authService.getAuthHeaders()
+            },
             body: JSON.stringify({
                 query: payload.query,
                 target_date: payload.target_date || undefined,
