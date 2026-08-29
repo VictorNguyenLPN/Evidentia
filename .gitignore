@@ -17,3 +17,5 @@ node_modules/
 .md
 
 data.test.json
+
+dist/
