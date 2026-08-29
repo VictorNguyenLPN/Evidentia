@@ -12,3 +12,6 @@ export * from './LawOverviewStats';
 export * from './LawOverviewCard';
 export * from './LawArticleCard';
 export * from './LawChapterSidebar';
+export * from './AuthModal';
+export * from './ShareModal';
+

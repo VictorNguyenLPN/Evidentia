@@ -7,6 +7,8 @@ export interface ChatSession {
     tag?: string;
     is_pinned?: boolean;
     isPinned?: boolean;
+    is_shared?: boolean;
+    shared_at?: string;
     created_at?: string;
     updated_at?: string;
 }
@@ -46,6 +48,10 @@ export interface ChatDocumentResponse {
     tag?: string;
     is_pinned?: boolean;
     isPinned?: boolean;
+    is_shared?: boolean;
+    shared_at?: string;
+    is_owner?: boolean;
+    is_private?: boolean;
     created_at?: string;
     updated_at?: string;
     messages?: Message[];

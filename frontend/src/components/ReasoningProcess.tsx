@@ -190,7 +190,7 @@ export const ReasoningProcess: React.FC<ReasoningProcessProps> = ({
                                                 <span>System: <strong className="text-slate-700 dark:text-slate-200 font-medium">{formatNum(stepTokens.system_tokens)}</strong></span>
                                                 <span className="text-slate-300 dark:text-slate-600">•</span>
                                                 <span>Answer: <strong className="text-slate-700 dark:text-slate-200 font-medium">{formatNum(stepTokens.answer_tokens)}</strong></span>
-                                                <span className="text-slate-300 dark:text-slate-600">=</span>
+                                                <span className="text-slate-300 dark:text-slate-600">•</span>
                                                 <span>Total: <strong className="text-slate-900 dark:text-white">{formatNum(stepTokens.total_tokens)}</strong></span>
                                             </div>
                                         )}
@@ -200,61 +200,7 @@ export const ReasoningProcess: React.FC<ReasoningProcessProps> = ({
                         );
                     })}
 
-                    {/* Integrated Token Telemetry & Phase Breakdown (Developer Mode Only) */}
-                    {isDevMode && !isStreaming && tokenUsage && tokenUsage.total_tokens > 0 && (() => {
-                        const synth = tokenUsage.synthesis_tokens || {
-                            prompt_tokens: 0,
-                            system_tokens: 0,
-                            answer_tokens: 0,
-                            total_tokens: 0,
-                        };
-                        const think = tokenUsage.thinking_tokens || {
-                            prompt_tokens: Math.max(0, (tokenUsage.prompt_tokens || 0) - (synth.prompt_tokens || 0)),
-                            system_tokens: Math.max(0, (tokenUsage.system_tokens || 0) - (synth.system_tokens || 0)),
-                            answer_tokens: Math.max(0, (tokenUsage.answer_tokens || 0) - (synth.answer_tokens || 0)),
-                            total_tokens: Math.max(0, (tokenUsage.total_tokens || 0) - (synth.total_tokens || 0)),
-                        };
 
-                        return (
-                            // <div className="flex gap-2 mt-3 pt-2.5 border-t border-slate-200/80 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-400">
-                            //     <div className="font-bold px-2 py-1.5 bg-slate-100 rounded-md">
-                            //         <span>Total: {formatNum(tokenUsage.total_tokens)}</span>
-                            //     </div>
-                            //     <div className="px-2 py-1.5 bg-slate-100  rounded-md">
-                            //         <span>Thinking: {formatNum(think.total_tokens)}</span>
-                            //     </div>
-                            //     <div className="px-2 py-1.5 bg-slate-100  rounded-md">
-                            //         <span>Synthesis: {formatNum(synth.total_tokens)}</span>
-                            //     </div>
-                            //     <div className="flex items-center justify-start text-[10.5px] gap-1.5 font-mono text-slate-500 dark:text-slate-400 py-0.5">
-                            //         <span className="font-sans font-medium text-slate-700 dark:text-slate-300">1. Thinking:</span>
-                            //         <div className="space-x-1.5 text-right">
-                            //             <span>Prompt(<strong className="text-slate-700 dark:text-slate-200 font-medium">{formatNum(think.prompt_tokens)}</strong>)</span>
-                            //             <span className="text-slate-300 dark:text-slate-600">•</span>
-                            //             <span>System(<strong className="text-slate-700 dark:text-slate-200 font-medium">{formatNum(think.system_tokens)}</strong>)</span>
-                            //             <span className="text-slate-300 dark:text-slate-600">•</span>
-                            //             <span>Answer(<strong className="text-slate-700 dark:text-slate-200 font-medium">{formatNum(think.answer_tokens)}</strong>)</span>
-                            //             <span className="text-slate-300 dark:text-slate-600">=</span>
-                            //             <span>Total: <strong className="text-red-600 dark:text-red-400">{formatNum(think.total_tokens)}</strong></span>
-                            //         </div>
-                            //     </div>
-
-                            //     <div className="flex items-center justify-start text-[10.5px] font-mono text-slate-500 dark:text-slate-400 py-0.5">
-                            //         <span className="font-sans font-medium text-slate-700 dark:text-slate-300">2. Synthesis:</span>
-                            //         <div className="space-x-1.5 text-right">
-                            //             <span>Prompt: <strong className="text-slate-700 dark:text-slate-200 font-medium">{formatNum(synth.prompt_tokens)}</strong></span>
-                            //             <span className="text-slate-300 dark:text-slate-600">•</span>
-                            //             <span>System: <strong className="text-slate-700 dark:text-slate-200 font-medium">{formatNum(synth.system_tokens)}</strong></span>
-                            //             <span className="text-slate-300 dark:text-slate-600">•</span>
-                            //             <span>Answer: <strong className="text-slate-700 dark:text-slate-200 font-medium">{formatNum(synth.answer_tokens)}</strong></span>
-                            //             <span className="text-slate-300 dark:text-slate-600">=</span>
-                            //             <span>Total: <strong className="text-slate-900 dark:text-white">{formatNum(synth.total_tokens)}</strong></span>
-                            //         </div>
-                            //     </div>
-                            // </div>
-                            <></>
-                        );
-                    })()}
                 </div>
             )}
         </div>

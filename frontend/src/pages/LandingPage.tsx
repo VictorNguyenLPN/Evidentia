@@ -6,6 +6,7 @@ import {
 import { Link } from 'react-router-dom';
 
 export const LandingPage: React.FC = () => {
+
   return (
     <div className="relative h-screen w-full bg-slate-50 text-slate-800 flex flex-col justify-between overflow-hidden select-none font-sans">
       {/* Top Navigation Bar */}
@@ -38,6 +39,7 @@ export const LandingPage: React.FC = () => {
           </Link>
         </div>
       </header>
+
 
       {/* Main Single Welcome / Hero Section */}
       <main className="relative z-10 flex-1 flex flex-col justify-center items-center max-w-6xl mx-auto px-6 py-6 w-full text-center  mb-[35px]">
