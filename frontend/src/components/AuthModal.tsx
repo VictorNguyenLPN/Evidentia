@@ -133,7 +133,7 @@ export const AuthModal: React.FC = () => {
       {/* Modal Box */}
       <div className="relative z-10 w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden flex flex-col text-slate-800 dark:text-slate-100 animate-in zoom-in-95 duration-200">
         {/* Header */}
-        <div className="flex items-center justify-between p-6">
+        <div className="flex items-center justify-between px-6 pt-6 pb-3 ">
           <div className="flex flex-col items-start">
             <h3 className="text-base font-bold text-slate-900 dark:text-white leading-tight">
               {tab === 'login' ? 'Đăng nhập tài khoản' : 'Đăng ký tài khoản mới'}
@@ -149,13 +149,6 @@ export const AuthModal: React.FC = () => {
           >
             <X className="w-4 h-4" />
           </button>
-        </div>
-
-        {/* 5 Free Questions Promo Banner */}
-        <div className="m-6 rounded-xl flex items-center gap-2 text-xs text-indigo-800 dark:text-indigo-300">
-          <span>
-            Đăng nhập hoặc đăng ký tài khoản để nhận ngay <strong>5 câu hỏi miễn phí</strong> tra cứu pháp luật.
-          </span>
         </div>
 
         {/* Form Body */}
