@@ -58,7 +58,7 @@ export const OverviewPage: React.FC = () => {
       {/* Header Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Tổng quan Hệ thống</h1>
+          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Tổng quan hệ thống</h1>
           <p className="text-xs text-slate-500 mt-1">
             Theo dõi trạng thái thời gian thực của người dùng, cơ sở dữ liệu Vector và các dịch vụ AI.
           </p>
@@ -82,21 +82,17 @@ export const OverviewPage: React.FC = () => {
       {/* KPI Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
-          title="Tổng Người Dùng"
+          title="Tổng người dùng"
           value={stats?.total_users ?? '—'}
-          // icon={Users}
           subtitle={`${stats?.admin_users || 0} Admin & ${stats?.pro_users || 0} Pro & ${stats?.free_users || 0} Free`}
-          // badge={{ text: `${stats?.pro_users || 0} Pro`, variant: 'indigo' }}
           iconColor="text-indigo-600"
           iconBg="bg-indigo-50"
         />
 
         <StatCard
-          title="Tổng Phiên Hội Thoại"
+          title="Tổng phiên hội thoại"
           value={stats?.total_chats ?? '—'}
-          // icon={MessageSquare}
           subtitle={`${stats?.total_messages || 0} tin nhắn`}
-          // badge={{ text: `${stats?.total_messages || 0} Msgs`, variant: 'slate' }}
           iconColor="text-blue-600"
           iconBg="bg-blue-50"
         />
@@ -104,19 +100,15 @@ export const OverviewPage: React.FC = () => {
         <StatCard
           title="Vector Points"
           value={qdrantInfo?.count ?? '—'}
-          // icon={Database}
-          subtitle={qdrantInfo?.configured ? 'Qdrant Cloud Đã Kết Nối' : 'Chưa cấu hình Cloud'}
-          // badge={{ text: 'Hybrid 768d', variant: 'success' }}
+          subtitle={qdrantInfo?.configured ? 'Qdrant Cloud đã kết nối' : 'Chưa cấu hình Cloud'}
           iconColor="text-emerald-600"
           iconBg="bg-emerald-50"
         />
 
         <StatCard
-          title="hỗ trợ"
+          title="Lượt hỏi đáp đã phục vụ"
           value={stats?.total_questions_asked ?? '—'}
-          // icon={RotateCcw}
-          subtitle={`Tổng số yêu cầu hỗ trợ từ ngườ dùng`}
-          // badge={{ text: 'User Quota', variant: 'warning' }}
+          subtitle={`Tổng số yêu cầu tra cứu từ người dùng`}
           iconColor="text-amber-600"
           iconBg="bg-amber-50"
         />
@@ -129,7 +121,7 @@ export const OverviewPage: React.FC = () => {
           <div className="flex items-center justify-between pb-4 border-b border-slate-100">
             <div className="flex items-center gap-2.5"> 
               <div>
-                <h2 className="text-sm font-bold text-slate-900">Tình trạng</h2>
+                <h2 className="text-sm font-bold text-slate-900">Trạng thái hệ thống</h2>
                 <p className="text-[11px] text-slate-500">Giám sát tình trạng hạ tầng hệ thống</p>
               </div>
             </div>
@@ -207,7 +199,7 @@ export const OverviewPage: React.FC = () => {
           <div>
             <div className="flex items-center gap-2.5 pb-4 border-b border-slate-100">
               <div>
-                <h2 className="text-sm font-bold text-slate-900">Thao tác Nhanh</h2>
+                <h2 className="text-sm font-bold text-slate-900">Thao tác nhanh</h2>
                 <p className="text-[11px] text-slate-500">Truy cập tức thì các tính năng chính</p>
               </div>
             </div>
@@ -220,7 +212,7 @@ export const OverviewPage: React.FC = () => {
                 <div className="flex items-center gap-2.5">
                   <Users className="w-4 h-4 text-indigo-600" />
                   <div>
-                    <p className="text-xs font-semibold text-slate-800 group-hover:text-indigo-700">Quản lý Người Dùng</p>
+                    <p className="text-xs font-semibold text-slate-800 group-hover:text-indigo-700">Quản lý người dùng</p>
                     <p className="text-[11px] text-slate-500">Tạo mới, phân quyền, đổi mật khẩu</p>
                   </div>
                 </div>
@@ -248,7 +240,7 @@ export const OverviewPage: React.FC = () => {
                 <div className="flex items-center gap-2.5">
                   <RotateCcw className="w-4 h-4 text-amber-600" />
                   <div>
-                    <p className="text-xs font-semibold text-slate-800 group-hover:text-indigo-700">Hạn Mức & Reset Lượt</p>
+                    <p className="text-xs font-semibold text-slate-800 group-hover:text-indigo-700">Hạn mức & Đặt lại lượt</p>
                     <p className="text-[11px] text-slate-500">Quản lý và đặt lại số câu hỏi cho người dùng</p>
                   </div>
                 </div>
@@ -262,7 +254,7 @@ export const OverviewPage: React.FC = () => {
                 <div className="flex items-center gap-2.5">
                   <MessageSquare className="w-4 h-4 text-blue-600" />
                   <div>
-                    <p className="text-xs font-semibold text-slate-800 group-hover:text-indigo-700">Nhật ký Hội Thoại</p>
+                    <p className="text-xs font-semibold text-slate-800 group-hover:text-indigo-700">Nhật ký hội thoại</p>
                     <p className="text-[11px] text-slate-500">Xem toàn bộ lịch sử hỏi đáp pháp lý</p>
                   </div>
                 </div>

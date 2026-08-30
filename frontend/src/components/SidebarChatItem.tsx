@@ -86,7 +86,7 @@ export const SidebarChatItem: React.FC<SidebarChatItemProps> = ({
                             }`}
                         title={item.title}
                     >
-                        {item.title || 'Đoạn chat không tên'}
+                        {item.title || 'Cuộc trò chuyện chưa có tiêu đề'}
                     </span>
                 )}
             </div>
@@ -99,7 +99,7 @@ export const SidebarChatItem: React.FC<SidebarChatItemProps> = ({
                         onClick={onToggleMenu}
                         className={`p-1 rounded-md text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-300/60 dark:hover:bg-slate-700/60 transition-opacity cursor-pointer ${isMenuOpen ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
                             }`}
-                        title="Tùy chọn đoạn chat"
+                        title="Tùy chọn cuộc trò chuyện"
                     >
                         <Ellipsis className="w-3.5 h-3.5" />
                     </button>
@@ -130,7 +130,7 @@ export const SidebarChatItem: React.FC<SidebarChatItemProps> = ({
                                     ) : (
                                         <>
                                             <Pin className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
-                                            <span>Ghim đoạn chat</span>
+                                            <span>Ghim</span>
                                         </>
                                     )}
                                 </button>

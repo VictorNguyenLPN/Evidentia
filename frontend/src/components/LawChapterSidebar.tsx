@@ -53,7 +53,7 @@ export const LawChapterSidebar: React.FC<LawChapterSidebarProps> = ({
 
             <div className="flex-1 overflow-y-auto p-2 space-y-1">
                 <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 px-3 py-1.5">
-                    Mục lục {chapters.length} Chương
+                    Mục lục ({chapters.length} chương)
                 </div>
 
                 {chapters.map((ch) => {

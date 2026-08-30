@@ -43,8 +43,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { to: '/', label: 'Tổng quan', icon: LayoutDashboard, end: true },
     { to: '/users', label: 'Người dùng', icon: Users },
     { to: '/vector-db', label: 'Vector DB', icon: Database },
-    { to: '/guest-limits', label: 'Hạn mức & Reset Lượt', icon: RotateCcw },
-    { to: '/chats', label: 'Nhật ký Hội thoại', icon: MessageSquareText },
+    { to: '/guest-limits', label: 'Hạn mức & Đặt lại lượt', icon: RotateCcw },
+    { to: '/chats', label: 'Nhật ký hội thoại', icon: MessageSquareText },
   ];
 
   return (
@@ -70,7 +70,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <>
                 <Link to="/" className="logo flex items-center min-w-0 gap-2">
                   <span className="text-xl font-bold tracking-tight text-indigo-600 dark:text-indigo-400 whitespace-nowrap">
-                    Evidentia. <span className='text-md font-bold tracking-tight text-black whitespace-nowrap'>admin</span>
+                    Evidentia <span className='text-md font-bold tracking-tight text-black whitespace-nowrap'>admin</span>
                   </span>
                 </Link>
 

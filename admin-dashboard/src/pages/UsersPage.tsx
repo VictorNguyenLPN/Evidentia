@@ -170,7 +170,7 @@ export const UsersPage: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Người Dùng</h1>
+          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Quản lý người dùng</h1>
           <p className="text-xs text-slate-500 mt-1">
             Tổng cộng <span className="font-semibold text-slate-800">{total}</span> tài khoản được đăng ký trong hệ thống.
           </p>
@@ -181,7 +181,7 @@ export const UsersPage: React.FC = () => {
           className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white text-xs font-semibold rounded-xl transition-colors shadow-sm shadow-indigo-200 cursor-pointer"
         >
           <UserPlus className="w-4 h-4" />
-          <span>Thêm Người Dùng</span>
+          <span>Thêm người dùng</span>
         </button>
       </div>
 
@@ -237,9 +237,9 @@ export const UsersPage: React.FC = () => {
         isOpen={isDeleteConfirmOpen}
         onClose={() => setIsDeleteConfirmOpen(false)}
         onConfirm={handleDeleteUser}
-        title="Xác nhận Xóa Người Dùng"
+        title="Xác nhận xóa người dùng"
         message={`Bạn có chắc chắn muốn xóa tài khoản ${targetUser?.email}? Toàn bộ lịch sử hội thoại và dữ liệu liên quan sẽ bị xóa vĩnh viễn.`}
-        confirmText="Xóa Tài Khoản"
+        confirmText="Xóa tài khoản"
         variant="danger"
         isLoading={isActionLoading}
       />

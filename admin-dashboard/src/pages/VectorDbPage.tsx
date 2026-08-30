@@ -106,7 +106,7 @@ export const VectorDbPage: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Ingestion & Vector Database Hub</h1>
+          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Quản lý Ingestion & Vector Database</h1>
           <p className="text-xs text-slate-500 mt-1">
             Quản lý tập chỉ mục Qdrant Cloud, nạp dữ liệu vector và kiểm thử công cụ Hybrid Retrieval.
           </p>
@@ -172,7 +172,7 @@ export const VectorDbPage: React.FC = () => {
           <div className="flex flex-col justify-start">
             <div>
               <div className="flex items-center gap-2 text-indigo-900 font-bold text-xs">
-                Nạp lại Toàn bộ Vector DB
+                Nạp lại toàn bộ Vector DB
               </div>
               <p className="text-[11px] text-slate-600 mt-1 leading-relaxed">
                 Tạo mới collection trên Qdrant Cloud, tính toán Dense Embedding và Sparse BM25, nạp theo batch từ file dữ liệu JSON.
@@ -204,7 +204,7 @@ export const VectorDbPage: React.FC = () => {
           <div className="flex flex-col justify-start">
             <div>
               <div className="flex items-center gap-2 text-slate-900 font-bold text-xs">
-                Đồng bộ Cấu trúc Văn bản Luật vào MongoDB
+                Đồng bộ cấu trúc văn bản luật vào MongoDB
               </div>
               <p className="text-[11px] text-slate-600 mt-1 leading-relaxed">
                 Cập nhật metadata của Luật, Chương, Mục và các Điều khoản vào MongoDB để phục vụ tra cứu văn bản nguyên văn.
@@ -245,7 +245,7 @@ export const VectorDbPage: React.FC = () => {
       <div className="bg-white rounded-xl border border-slate-200/90 p-5 shadow-2xs">
         <div className="flex items-center gap-2.5 pb-4 border-b border-slate-100">
           <div>
-            <h2 className="text-sm font-bold text-slate-900">Thử nghiệm Truy xuất Hybrid Search (Retrieval Playground)</h2>
+            <h2 className="text-sm font-bold text-slate-900">Thử nghiệm truy xuất Hybrid Search (Retrieval Playground)</h2>
             <p className="text-[11px] text-slate-500">
               Kiểm tra trực tiếp độ chính xác của bộ lọc thời gian và thuật toán RRF (Dense + BM25).
             </p>

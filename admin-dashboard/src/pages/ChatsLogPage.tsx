@@ -73,7 +73,7 @@ export const ChatsLogPage: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Nhật ký Hội Thoại Toàn Hệ Thống</h1>
+          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Nhật ký hội thoại toàn hệ thống</h1>
           <p className="text-xs text-slate-500 mt-1">
             Tổng cộng <span className="font-semibold text-slate-800">{total}</span> phiên hỏi đáp pháp lý từ người dùng và khách.
           </p>
@@ -194,9 +194,9 @@ export const ChatsLogPage: React.FC = () => {
         isOpen={isDeleteConfirmOpen}
         onClose={() => setIsDeleteConfirmOpen(false)}
         onConfirm={handleDeleteChat}
-        title="Xác nhận Xóa Phiên Chat"
-        message={`Bạn có chắc muốn xóa phiên chat "${targetChat?.title}" (ID: ${targetChat?.id})? Dữ liệu không thể phục hồi.`}
-        confirmText="Xóa Phiên Chat"
+        title="Xác nhận xóa phiên hội thoại"
+        message={`Bạn có chắc muốn xóa phiên hội thoại "${targetChat?.title}" (ID: ${targetChat?.id})? Dữ liệu không thể phục hồi.`}
+        confirmText="Xóa phiên hội thoại"
         variant="danger"
         isLoading={isActionLoading}
       />

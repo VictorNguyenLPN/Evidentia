@@ -156,7 +156,7 @@ export const ChatPage: React.FC = () => {
       await navigator.clipboard.writeText(shareUrl);
       setShareToast({
         show: true,
-        message: 'Đã tạo và sao chép liên kết chia sẻ cuộc trò chuyện vào clipboard!',
+        message: 'Đã tạo và sao chép liên kết chia sẻ cuộc trò chuyện vào bộ nhớ tạm!',
       });
       setTimeout(() => {
         setShareToast(null);

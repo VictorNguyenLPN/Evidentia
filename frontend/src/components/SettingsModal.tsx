@@ -125,10 +125,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             <div>
               <h3 className="text-base font-bold text-slate-900 dark:text-white">
                 {activeSection === 'account' && 'Hồ sơ & Tài khoản'}
-                {activeSection === 'general' && 'Cài đặt Chung'}
+                {activeSection === 'general' && 'Cài đặt chung'}
                 {activeSection === 'usage' && 'Thống kê Token & Hạn mức'}
-                {activeSection === 'data' && 'Quản lý Dữ liệu'}
-                {activeSection === 'about' && 'Thông tin Ứng dụng'}
+                {activeSection === 'data' && 'Quản lý dữ liệu'}
+                {activeSection === 'about' && 'Thông tin ứng dụng'}
               </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                 {activeSection === 'account' && 'Quản lý thông tin tài khoản cá nhân và bảo mật'}

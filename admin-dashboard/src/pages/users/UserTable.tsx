@@ -27,7 +27,7 @@ export const UserTable: React.FC<UserTableProps> = ({
               <th className="py-3 px-4">Tài khoản</th>
               <th className="py-3 px-4">Phân quyền</th>
               <th className="py-3 px-4">Gói dịch vụ</th>
-              <th className="py-3 px-4 text-center">Số chat</th>
+              <th className="py-3 px-4 text-center">Số hội thoại</th>
               <th className="py-3 px-4">Ngày tạo</th>
               <th className="py-3 px-4 text-right">Thao tác</th>
             </tr>

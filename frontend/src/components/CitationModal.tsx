@@ -61,7 +61,7 @@ export const CitationModal: React.FC<CitationModalProps> = ({ citation, onClose 
                         )}
                         {citation.doc_type && (
                             <span className="px-2.5 py-1 rounded-md bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 font-medium">
-                                Loại VB: {citation.doc_type}
+                                Loại văn bản: {citation.doc_type}
                             </span>
                         )}
                     </div>

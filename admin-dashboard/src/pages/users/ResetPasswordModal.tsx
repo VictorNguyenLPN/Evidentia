@@ -31,7 +31,7 @@ export const ResetPasswordModal: React.FC<ResetPasswordModalProps> = ({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Đặt lại Mật khẩu" maxWidth="sm">
+    <Modal isOpen={isOpen} onClose={onClose} title="Đặt lại mật khẩu" maxWidth="sm">
       <form onSubmit={handleSubmit} className="space-y-4">
         <p className="text-xs text-slate-600">
           Đặt mật khẩu mới cho tài khoản: <span className="font-semibold text-slate-900">{user?.email}</span>
@@ -64,7 +64,7 @@ export const ResetPasswordModal: React.FC<ResetPasswordModalProps> = ({
             className="px-4 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors cursor-pointer flex items-center gap-1.5"
           >
             {isLoading && <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />}
-            Cập nhật Mật khẩu
+            Cập nhật mật khẩu
           </button>
         </div>
       </form>
