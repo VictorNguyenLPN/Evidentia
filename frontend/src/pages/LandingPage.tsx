@@ -15,7 +15,7 @@ export const LandingPage: React.FC = () => {
         <Link to="/" className="flex flex-col items-start">
           <div className="flex items-center gap-1.5">
             <span className="text-xl font-bold tracking-tight text-slate-900">
-              <span className="text-indigo-600">Evidentia.</span>
+              <span className="text-indigo-600">Evidentia</span>
             </span>
           </div>
           <p className="text-[11px] text-slate-500 font-medium tracking-wide">Hệ thống trợ lý pháp lý đa tác tử thông minh</p>
@@ -85,7 +85,7 @@ export const LandingPage: React.FC = () => {
       {/* Bottom Minimal Footer Strip (within the single-section page layout) */}
       <footer className="relative z-10 w-full max-w-7xl mx-auto px-6 py-4 flex flex-col sm:flex-row items-center justify-between text-[11px] text-slate-500 border-t border-slate-200/80">
         <div>
-          <span>© 2026 Evidentia. - Hệ thống trợ lý pháp lý đa tác tử thông minh</span>
+          <span>© 2026 Evidentia - Hệ thống trợ lý pháp lý đa tác tử thông minh</span>
         </div>
         <div className="flex items-center gap-4 mt-2 sm:mt-0 font-medium">
           <span className="hover:text-slate-800 transition-colors cursor-pointer">Tài liệu API</span>
