@@ -70,7 +70,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <>
                 <Link to="/" className="logo flex items-center min-w-0 gap-2">
                   <span className="text-xl font-bold tracking-tight text-indigo-600 dark:text-indigo-400 whitespace-nowrap">
-                    Evidentia. <span className='text-md font-bold tracking-tight text-black whitespace-nowrap'>admin</span>
+                    Evidentia <span className='text-md font-bold tracking-tight text-black whitespace-nowrap'>admin</span>
                   </span>
                 </Link>
 
