@@ -10,7 +10,7 @@ export const GeneralTab: React.FC = () => {
       <div className="py-2 flex items-center justify-between gap-4">
         <div className="space-y-0.5">
           <h4 className="text-sm font-semibold text-slate-900 dark:text-white">
-            Chế độ Nhà phát triển
+            Chế độ nhà phát triển
           </h4>
           <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm leading-relaxed">
             Hiển thị chi tiết số lượng Token dưới mỗi câu trả lời.
@@ -40,7 +40,7 @@ export const GeneralTab: React.FC = () => {
       <div className="py-2 flex items-center justify-between gap-4">
         <div className="space-y-0.5">
           <h4 className="text-sm font-semibold text-slate-900 dark:text-white">
-            Chuyển sang theme tối
+            Giao diện tối
           </h4>
           <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm leading-relaxed">
             Giao diện nền tối giúp dịu mắt khi làm việc ban đêm.

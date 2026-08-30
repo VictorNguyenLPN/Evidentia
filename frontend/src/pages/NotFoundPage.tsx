@@ -66,7 +66,7 @@ export const NotFoundPage: React.FC = () => {
                         className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs sm:text-sm font-semibold shadow-md shadow-indigo-600/20"
                     >
                         <ArrowLeft className="w-4 h-4" />
-                        <span>Trang trước</span>
+                        <span>Quay lại trang trước</span>
                     </span>
                 </div>
             </main >

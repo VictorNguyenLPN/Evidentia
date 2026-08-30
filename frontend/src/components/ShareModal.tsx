@@ -51,7 +51,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({
             setCopied(true);
             setTimeout(() => setCopied(false), 2500);
         } catch {
-            setError('Không thể tự động sao chép vào clipboard. Vui lòng sao chép thủ công.');
+            setError('Không thể tự động sao chép vào bộ nhớ tạm. Vui lòng sao chép thủ công.');
         }
     };
 
@@ -117,7 +117,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({
                             Chủ đề cuộc trò chuyện
                         </span>
                         <p className="text-sm font-medium text-slate-800 dark:text-slate-200 truncate">
-                            {chatTitle || 'Đoạn chat không tên'}
+                            {chatTitle || 'Cuộc trò chuyện chưa có tiêu đề'}
                         </p>
                     </div>
 
@@ -203,7 +203,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({
                                 {copied && (
                                     <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1 pt-0.5 animate-in fade-in duration-150">
                                         <Check className="w-3 h-3" />
-                                        Đã sao chép liên kết vào clipboard!
+                                        Đã sao chép liên kết vào bộ nhớ tạm!
                                     </p>
                                 )}
                             </div>

@@ -44,7 +44,7 @@ export const UserFilterToolbar: React.FC<UserFilterToolbarProps> = ({
           onChange={(e) => onRoleChange(e.target.value)}
           className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
         >
-          <option value="all">Tất cả Quyền hạn</option>
+          <option value="all">Tất cả quyền hạn</option>
           <option value="admin">Quản trị viên (Admin)</option>
           <option value="editor">Biên tập viên (Editor)</option>
           <option value="user">Người dùng (User)</option>
@@ -56,7 +56,7 @@ export const UserFilterToolbar: React.FC<UserFilterToolbarProps> = ({
           onChange={(e) => onPlanChange(e.target.value)}
           className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
         >
-          <option value="all">Tất cả Gói cước</option>
+          <option value="all">Tất cả gói cước</option>
           <option value="free">Miễn phí (Free)</option>
           <option value="pro">Gói Pro</option>
           <option value="enterprise">Gói Doanh nghiệp</option>

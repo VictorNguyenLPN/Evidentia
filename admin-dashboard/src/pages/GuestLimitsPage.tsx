@@ -97,7 +97,7 @@ export const GuestLimitsPage: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Quản lý Hạn Mức & Reset Lượt Chat</h1>
+          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Quản lý hạn mức & Đặt lại lượt hỏi</h1>
           <p className="text-xs text-slate-500 mt-1">
             Theo dõi số câu hỏi đã dùng của người dùng trên toàn hệ thống (Gói Free: {defaultFreeLimit} câu, Pro/Enterprise: Không giới hạn) và đặt lại hạn mức linh hoạt.
           </p>
@@ -110,7 +110,7 @@ export const GuestLimitsPage: React.FC = () => {
             icon={<RotateCcw className="w-4 h-4" />}
             className="bg-amber-600 hover:bg-amber-700 active:bg-amber-800 text-white"
           >
-            <span>Reset Lượt Toàn Bộ</span>
+            <span>Đặt lại lượt toàn bộ</span>
           </Button>
         </div>
       </div>
@@ -255,7 +255,7 @@ export const GuestLimitsPage: React.FC = () => {
                             icon={<RotateCcw className="w-3 h-3" />}
                             title="Đặt lại số câu hỏi đã dùng về 0"
                           >
-                            <span>Reset lượt ({rec.questions_used})</span>
+                            <span>Đặt lại lượt ({rec.questions_used})</span>
                           </Button>
                         </div>
                       </td>
@@ -273,9 +273,9 @@ export const GuestLimitsPage: React.FC = () => {
         isOpen={isResetSingleConfirmOpen}
         onClose={() => setIsResetSingleConfirmOpen(false)}
         onConfirm={handleResetSingleUser}
-        title="Xác nhận Reset Lượt Câu Hỏi"
+        title="Xác nhận đặt lại lượt câu hỏi"
         message={`Bạn có chắc muốn đặt lại số câu hỏi đã dùng về 0 cho người dùng ${targetUser?.full_name || targetUser?.email} (${targetUser?.email})?`}
-        confirmText="Reset về 0 câu"
+        confirmText="Đặt lại về 0 câu"
         variant="warning"
         isLoading={isActionLoading}
       />
@@ -285,11 +285,11 @@ export const GuestLimitsPage: React.FC = () => {
         isOpen={isResetAllConfirmOpen}
         onClose={() => setIsResetAllConfirmOpen(false)}
         onConfirm={handleResetAllUsers}
-        title="Xác nhận Reset Lượt Toàn Hệ Thống"
+        title="Xác nhận đặt lại lượt toàn hệ thống"
         message={
           <div className="space-y-3">
             <p>
-              Bạn đang chuẩn bị đặt lại số câu hỏi đã dùng về 0. Chọn nhóm đối tượng người dùng cần reset:
+              Bạn đang chuẩn bị đặt lại số câu hỏi đã dùng về 0. Chọn nhóm đối tượng người dùng cần đặt lại:
             </p>
             <div className="mt-2">
               <label className="block text-xs font-semibold text-slate-700 mb-1">Nhóm người dùng áp dụng:</label>
@@ -306,7 +306,7 @@ export const GuestLimitsPage: React.FC = () => {
             </div>
           </div>
         }
-        confirmText="Xác nhận Reset"
+        confirmText="Xác nhận đặt lại"
         variant="warning"
         isLoading={isActionLoading}
       />

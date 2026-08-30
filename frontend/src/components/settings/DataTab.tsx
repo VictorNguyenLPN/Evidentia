@@ -29,7 +29,7 @@ export const DataTab: React.FC<DataTabProps> = ({ chats, onClearAllChats }) => {
         <div className="py-2 flex items-center justify-between gap-4">
           <div>
             <h4 className="text-sm font-medium text-slate-800 dark:text-slate-200">
-              Lịch sử trò chuyện ({chats.length} đoạn chat)
+              Lịch sử trò chuyện ({chats.length} cuộc trò chuyện)
             </h4>
           </div>
 
@@ -61,7 +61,7 @@ export const DataTab: React.FC<DataTabProps> = ({ chats, onClearAllChats }) => {
         <div className="py-2 flex items-center justify-between gap-4">
           <div>
             <h4 className="text-sm font-medium text-slate-800 dark:text-slate-200">
-              Lưu trữ tất cả đoạn chat
+              Lưu trữ tất cả cuộc trò chuyện
             </h4>
           </div>
 
@@ -75,7 +75,7 @@ export const DataTab: React.FC<DataTabProps> = ({ chats, onClearAllChats }) => {
         <div className="py-2 flex items-center justify-between gap-4">
           <div>
             <h4 className="text-sm font-medium text-slate-800 dark:text-slate-200">
-              Gỡ ghim tất cả đoạn chat
+              Gỡ ghim tất cả cuộc trò chuyện
             </h4>
           </div>
 

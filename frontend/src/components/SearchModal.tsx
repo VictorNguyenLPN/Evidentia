@@ -99,7 +99,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
                         type="text"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        placeholder="Tìm kiếm đoạn chat..."
+                        placeholder="Tìm kiếm cuộc trò chuyện..."
                         className="w-full py-4 text-sm bg-transparent text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none"
                     />
                     {searchQuery && (
@@ -120,7 +120,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
 
                     {filteredChats.length === 0 ? (
                         <div className="py-8 text-center text-sm text-slate-500 dark:text-slate-400">
-                            Không tìm thấy đoạn chat nào
+                            Không tìm thấy cuộc trò chuyện nào
                         </div>
                     ) : (
                         <div className="space-y-1">

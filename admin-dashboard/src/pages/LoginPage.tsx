@@ -15,7 +15,7 @@ export const LoginPage: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim() || !password) {
-      setError('Vui lòng nhập đầy đủ Email và Mật khẩu.');
+      setError('Vui lòng nhập đầy đủ email và mật khẩu.');
       return;
     }
 
@@ -38,7 +38,7 @@ export const LoginPage: React.FC = () => {
         {/* Header */}
         <div className="pt-8 text-center">
           <h1 className="text-xl font-bold text-slate-900 tracking-tight">Evidentia Admin Hub</h1>
-          <p className="text-xs text-slate-500 mt-1">Đăng nhập tài khoản Quản trị viên để tiếp tục</p>
+          <p className="text-xs text-slate-500 mt-1">Đăng nhập tài khoản quản trị viên để tiếp tục</p>
         </div>
 
         {/* Form */}
@@ -51,7 +51,7 @@ export const LoginPage: React.FC = () => {
           )}
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1.5">Email Quản trị</label>
+            <label className="block text-xs font-semibold text-slate-700 mb-1.5">Email quản trị</label>
             <div className="relative">
               <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input
@@ -89,7 +89,7 @@ export const LoginPage: React.FC = () => {
               <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
             ) : (
               <>
-                <span>Đăng nhập Quản trị</span>
+                <span>Đăng nhập quản trị</span>
                 <ArrowRight className="w-4 h-4" />
               </>
             )}
@@ -97,7 +97,7 @@ export const LoginPage: React.FC = () => {
 
           <div className="pt-2 text-center">
             <p className="text-[11px] text-slate-500 flex items-center justify-center gap-1.5">
-              Chỉ tài khoản có phân quyền <b>Admin</b> mới có thể truy cập
+              Chỉ tài khoản có phân quyền <b>Admin</b> mới có thể truy cập.
             </p>
           </div>
         </form>

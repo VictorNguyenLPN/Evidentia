@@ -43,8 +43,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { to: '/', label: 'Tổng quan', icon: LayoutDashboard, end: true },
     { to: '/users', label: 'Người dùng', icon: Users },
     { to: '/vector-db', label: 'Vector DB', icon: Database },
-    { to: '/guest-limits', label: 'Hạn mức & Reset Lượt', icon: RotateCcw },
-    { to: '/chats', label: 'Nhật ký Hội thoại', icon: MessageSquareText },
+    { to: '/guest-limits', label: 'Hạn mức & Đặt lại lượt', icon: RotateCcw },
+    { to: '/chats', label: 'Nhật ký hội thoại', icon: MessageSquareText },
   ];
 
   return (

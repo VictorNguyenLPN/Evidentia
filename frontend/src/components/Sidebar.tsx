@@ -295,7 +295,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                         ? 'bg-slate-200/80 dark:bg-slate-800 text-slate-900 dark:text-white font-medium'
                                         : 'text-slate-800 dark:text-slate-200 hover:bg-slate-200/80 dark:hover:bg-slate-800'
                                     } rounded-lg cursor-pointer transition-colors`}
-                                title="Đoạn chat mới"
+                                title="Cuộc trò chuyện mới"
                             >
                                 <div className="w-9 h-9 flex items-center justify-center shrink-0">
                                     <SquarePen className="w-4 h-4" />
@@ -304,7 +304,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                     className={`transition-opacity duration-200 whitespace-nowrap ${isSidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
                                         }`}
                                 >
-                                    Đoạn chat mới
+                                    Cuộc trò chuyện mới
                                 </span>
                             </button>
                         </div>
@@ -336,7 +336,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                             <button
                                 onClick={() => navigate('/achieves')}
                                 className="w-full h-9 flex items-center gap-1 text-sm text-slate-800 dark:text-slate-200 hover:bg-slate-200/80 dark:hover:bg-slate-800 rounded-lg cursor-pointer transition-colors"
-                                title="Kho lưu trữ chat"
+                                title="Kho lưu trữ cuộc trò chuyện"
                             >
                                 <div className="w-9 h-9 flex items-center justify-center shrink-0">
                                     <ArchiveRestore className="w-4 h-4" />
@@ -345,7 +345,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                     className={`transition-opacity duration-200 whitespace-nowrap ${isSidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
                                         }`}
                                 >
-                                    Kho lưu trữ chat
+                                    Kho lưu trữ cuộc trò chuyện
                                 </span>
                             </button>
                         </div>
@@ -412,13 +412,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                         type="button"
                                         onClick={() => setIsHistoryExpanded((prev) => !prev)}
                                         className="flex items-center gap-1.5 text-sm font-semibold text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 tracking-wider transition-colors cursor-pointer select-none group"
-                                        title={isHistoryExpanded ? 'Thu gọn lịch sử chat' : 'Mở rộng lịch sử chat'}
+                                        title={isHistoryExpanded ? 'Thu gọn lịch sử trò chuyện' : 'Mở rộng lịch sử trò chuyện'}
                                     >
                                         <span
                                             className={`transition-opacity duration-200 whitespace-nowrap ${isSidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
                                                 }`}
                                         >
-                                            Đoạn chat
+                                            Lịch sử trò chuyện
                                         </span>
                                         <ChevronDown
                                             className={`w-3.5 h-3.5 text-gray-400 group-hover:text-gray-600 transition-transform duration-200 ${isHistoryExpanded ? 'rotate-0' : '-rotate-90'

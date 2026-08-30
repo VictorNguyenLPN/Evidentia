@@ -331,7 +331,7 @@ export const LawsPage: React.FC = () => {
                                         Hiệu lực từ: {activeLaw?.effect_date}
                                     </h2>
                                     <h2 className="text-sm text-slate-600 dark:text-slate-400 truncate">
-                                        Hết hiệu lực: {activeLaw?.expire_date || 'Null'}
+                                        Hết hiệu lực: {activeLaw?.expire_date || 'Chưa xác định'}
                                     </h2>
                                     <h2 className="text-sm text-slate-600 dark:text-slate-400 truncate">
                                         Trạng thái: {activeLaw?.effect_status_name}
@@ -347,7 +347,7 @@ export const LawsPage: React.FC = () => {
                                     {activeArticles.length === 0 && !isLoadingArticles ? (
                                         <div className="bg-white dark:bg-slate-950 text-center h-full flex flex-col items-center justify-center">
                                             <AlertCircle className="w-8 h-8 text-slate-300 dark:text-slate-600 mx-auto mb-2" />
-                                            <h4 className="text-lg font-bold text-slate-800 dark:text-slate-200">Văn bản không tồn tại</h4>
+                                            <h4 className="text-lg font-bold text-slate-800 dark:text-slate-200">Không tìm thấy điều luật phù hợp</h4>
                                             <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
                                                 Hãy thử thay đổi từ khóa tìm kiếm hoặc chọn lại chương mục.
                                             </p>
