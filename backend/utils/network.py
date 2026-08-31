@@ -1,5 +1,6 @@
 from fastapi import Request
 
+
 def get_client_ip(request: Request) -> str:
     """
     Extract client IP address considering proxy headers (X-Forwarded-For, X-Real-IP).

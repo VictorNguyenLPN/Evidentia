@@ -1,21 +1,25 @@
-from typing import Optional, List, Dict, Any
-from pydantic import BaseModel, Field
+from typing import Any
+
+from pydantic import BaseModel
+
 
 class LawDocumentSummary(BaseModel):
     document_id: str
     document_title: str
-    doc_identity: Optional[str] = None
-    document_type: Optional[str] = None
-    issue_date: Optional[str] = None
-    effect_date: Optional[str] = None
-    expire_date: Optional[str] = None
-    effect_status_name: Optional[str] = None
-    organ_names: Optional[List[str]] = None
-    articles_count: Optional[int] = 0
+    doc_identity: str | None = None
+    document_type: str | None = None
+    issue_date: str | None = None
+    effect_date: str | None = None
+    expire_date: str | None = None
+    effect_status_name: str | None = None
+    organ_names: list[str] | None = None
+    articles_count: int | None = 0
+
 
 class LawDetailResponse(BaseModel):
-    document: Dict[str, Any]
-    structure: Optional[List[Dict[str, Any]]] = None
+    document: dict[str, Any]
+    structure: list[dict[str, Any]] | None = None
+
 
 class ArticleResponse(BaseModel):
-    article: Dict[str, Any]
+    article: dict[str, Any]

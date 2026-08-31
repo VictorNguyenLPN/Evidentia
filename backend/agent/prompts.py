@@ -1,7 +1,8 @@
 from datetime import datetime
 
+
 def get_react_system_instruction() -> str:
-    today_str = datetime.now().strftime('%Y-%m-%d')
+    today_str = datetime.now().strftime("%Y-%m-%d")
     return f"""
 Bạn là AI Điều Phối Trợ Lý Pháp Luật Evidentia (Autonomous Legal ReAct Agent).
 Nhiệm vụ của bạn là giải quyết câu hỏi của người dùng bằng cách suy luận từng bước (ReAct: Thought -> Action -> Observation).
@@ -58,6 +59,7 @@ VÍ DỤ:
     "action_input": {{}}
 }}
 """.strip()
+
 
 SYNTHESIS_SYSTEM_INSTRUCTION = """
 Bạn là Trợ lý Pháp lý Thông minh Evidentia (Evidentia Legal AI Assistant).

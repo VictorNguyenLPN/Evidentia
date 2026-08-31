@@ -1,10 +1,11 @@
 import json
 import logging
-from typing import Optional, Dict, Any, Tuple
+from typing import Any
 
 from backend.config import GEMINI_API_KEY, GEMINI_MODEL
 
 logger = logging.getLogger(__name__)
+
 
 class GeminiLLMClient:
     """
@@ -12,11 +13,12 @@ class GeminiLLMClient:
     Supports Gemini 3.1 Flash Lite / Gemini 2.5 Flash Lite / configurable models.
     Provides precise token usage extraction across prompt, system, answer, and total tokens.
     """
+
     def __init__(self, api_key: str = GEMINI_API_KEY, model_name: str = GEMINI_MODEL):
         self.api_key = api_key
         self.model_name = model_name
         self._genai_client = None
-        self._token_cache: Dict[str, int] = {}
+        self._token_cache: dict[str, int] = {}
         if self.api_key:
             try:
                 self._init_client()
@@ -29,7 +31,6 @@ class GeminiLLMClient:
     def is_ready(self) -> bool:
         return bool(self.api_key)
 
-
     def _init_client(self):
         if not self.api_key:
             raise ValueError(
@@ -37,6 +38,7 @@ class GeminiLLMClient:
             )
 
         from google import genai
+
         self._genai_client = genai.Client(api_key=self.api_key)
         logger.info(f"Initialized Google GenAI client with model: {self.model_name}")
         return self._genai_client
@@ -46,7 +48,7 @@ class GeminiLLMClient:
             self._init_client()
         return self._genai_client
 
-    def check_readiness(self) -> Dict[str, Any]:
+    def check_readiness(self) -> dict[str, Any]:
         """
         Verify Gemini API key and model readiness by testing connectivity.
         """
@@ -86,11 +88,8 @@ class GeminiLLMClient:
             return approx
 
     def generate_with_usage(
-        self,
-        prompt: str,
-        system_instruction: Optional[str] = None,
-        temperature: float = 0.2
-    ) -> Tuple[str, Dict[str, int]]:
+        self, prompt: str, system_instruction: str | None = None, temperature: float = 0.2
+    ) -> tuple[str, dict[str, int]]:
         """
         Generate response from Gemini model and return (generated_text, token_usage_dict).
         """
@@ -103,9 +102,7 @@ class GeminiLLMClient:
                 config["temperature"] = temperature
 
             response = client.models.generate_content(
-                model=self.model_name,
-                contents=prompt,
-                config=config if config else None
+                model=self.model_name, contents=prompt, config=config if config else None
             )
 
             text = response.text.strip() if response.text else ""
@@ -119,7 +116,9 @@ class GeminiLLMClient:
                 total_prompt = response.usage_metadata.prompt_token_count or 0
                 candidates_tokens = response.usage_metadata.candidates_token_count or 0
                 prompt_tokens = max(0, total_prompt - system_tokens)
-                total_tokens = response.usage_metadata.total_token_count or (prompt_tokens + system_tokens + candidates_tokens)
+                total_tokens = response.usage_metadata.total_token_count or (
+                    prompt_tokens + system_tokens + candidates_tokens
+                )
             else:
                 prompt_tokens = self.count_tokens(prompt)
                 candidates_tokens = self.count_tokens(text)
@@ -129,7 +128,7 @@ class GeminiLLMClient:
                 "prompt_tokens": prompt_tokens,
                 "system_tokens": system_tokens,
                 "answer_tokens": candidates_tokens,
-                "total_tokens": total_tokens
+                "total_tokens": total_tokens,
             }
             return text, usage
         except Exception as e:
@@ -137,10 +136,7 @@ class GeminiLLMClient:
             raise e
 
     def generate(
-        self,
-        prompt: str,
-        system_instruction: Optional[str] = None,
-        temperature: float = 0.2
+        self, prompt: str, system_instruction: str | None = None, temperature: float = 0.2
     ) -> str:
         """
         Generate response from Gemini model (backwards compatible).
@@ -149,10 +145,7 @@ class GeminiLLMClient:
         return text
 
     def generate_stream_with_usage(
-        self,
-        prompt: str,
-        system_instruction: Optional[str] = None,
-        temperature: float = 0.2
+        self, prompt: str, system_instruction: str | None = None, temperature: float = 0.2
     ):
         """
         Generate streaming token chunks from Gemini model and yield events:
@@ -170,9 +163,7 @@ class GeminiLLMClient:
                 config["temperature"] = temperature
 
             response = client.models.generate_content_stream(
-                model=self.model_name,
-                contents=prompt,
-                config=config if config else None
+                model=self.model_name, contents=prompt, config=config if config else None
             )
 
             last_usage_metadata = None
@@ -188,7 +179,9 @@ class GeminiLLMClient:
                 total_prompt = last_usage_metadata.prompt_token_count or 0
                 candidates_tokens = last_usage_metadata.candidates_token_count or 0
                 prompt_tokens = max(0, total_prompt - system_tokens)
-                total_tokens = last_usage_metadata.total_token_count or (prompt_tokens + system_tokens + candidates_tokens)
+                total_tokens = last_usage_metadata.total_token_count or (
+                    prompt_tokens + system_tokens + candidates_tokens
+                )
             else:
                 prompt_tokens = self.count_tokens(prompt)
                 candidates_tokens = self.count_tokens(full_text)
@@ -198,18 +191,17 @@ class GeminiLLMClient:
                 "prompt_tokens": prompt_tokens,
                 "system_tokens": system_tokens,
                 "answer_tokens": candidates_tokens,
-                "total_tokens": total_tokens
+                "total_tokens": total_tokens,
             }
             yield {"type": "usage", "usage": usage}
         except Exception as e:
-            logger.error(f"Error streaming from Gemini model ({self.model_name}): {e}", exc_info=True)
+            logger.error(
+                f"Error streaming from Gemini model ({self.model_name}): {e}", exc_info=True
+            )
             raise e
 
     def generate_stream(
-        self,
-        prompt: str,
-        system_instruction: Optional[str] = None,
-        temperature: float = 0.2
+        self, prompt: str, system_instruction: str | None = None, temperature: float = 0.2
     ):
         """
         Generate streaming token chunks from Gemini model (backwards compatible).
@@ -219,20 +211,19 @@ class GeminiLLMClient:
                 yield event.get("content", "")
 
     def generate_json_with_usage(
-        self,
-        prompt: str,
-        system_instruction: Optional[str] = None,
-        temperature: float = 0.1
-    ) -> Tuple[Dict[str, Any], Dict[str, int]]:
+        self, prompt: str, system_instruction: str | None = None, temperature: float = 0.1
+    ) -> tuple[dict[str, Any], dict[str, int]]:
         """
         Generate structured JSON response and token usage.
         """
         json_instruction = (
-            (system_instruction or "") +
-            "\nIMPORTANT: Your response MUST be valid JSON only. Do not enclose in markdown code blocks like ```json ... ``` unless necessary, or ensure it is clean parsable JSON."
+            (system_instruction or "")
+            + "\nIMPORTANT: Your response MUST be valid JSON only. Do not enclose in markdown code blocks like ```json ... ``` unless necessary, or ensure it is clean parsable JSON."
         ).strip()
 
-        raw_output, usage = self.generate_with_usage(prompt=prompt, system_instruction=json_instruction, temperature=temperature)
+        raw_output, usage = self.generate_with_usage(
+            prompt=prompt, system_instruction=json_instruction, temperature=temperature
+        )
 
         # Clean potential markdown formatting
         cleaned = raw_output.strip()
@@ -247,22 +238,22 @@ class GeminiLLMClient:
         try:
             data = json.loads(cleaned)
         except json.JSONDecodeError as err:
-            logger.warning(f"Failed to parse JSON response from Gemini: {err}. Raw text: {raw_output}")
+            logger.warning(
+                f"Failed to parse JSON response from Gemini: {err}. Raw text: {raw_output}"
+            )
             data = {"raw_text": raw_output, "error": "json_parse_failed"}
 
         return data, usage
 
     def generate_json(
-        self,
-        prompt: str,
-        system_instruction: Optional[str] = None,
-        temperature: float = 0.1
-    ) -> Dict[str, Any]:
+        self, prompt: str, system_instruction: str | None = None, temperature: float = 0.1
+    ) -> dict[str, Any]:
         """
         Generate structured JSON response (backwards compatible).
         """
         data, _ = self.generate_json_with_usage(prompt, system_instruction, temperature)
         return data
+
 
 # Singleton instance
 gemini_client = GeminiLLMClient()

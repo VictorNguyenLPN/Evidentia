@@ -1,5 +1,7 @@
-from typing import Optional, Dict, Any
+from typing import Any
+
 from pydantic import BaseModel
+
 
 class SystemStatusResponse(BaseModel):
     status: str
@@ -10,13 +12,15 @@ class SystemStatusResponse(BaseModel):
     qdrant_configured: bool
     mongodb_connected: bool
 
+
 class ServiceHealthInfo(BaseModel):
     status: str
-    message: Optional[str] = None
-    latency_ms: Optional[float] = None
-    details: Optional[Dict[str, Any]] = None
+    message: str | None = None
+    latency_ms: float | None = None
+    details: dict[str, Any] | None = None
+
 
 class SystemHealthResponse(BaseModel):
     status: str
     timestamp: str
-    services: Dict[str, Any]
+    services: dict[str, Any]

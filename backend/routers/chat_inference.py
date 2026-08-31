@@ -1,24 +1,26 @@
 import json
 import logging
-from typing import Dict, Any
-from fastapi import APIRouter, HTTPException, status, Depends, Request
+from typing import Any
+
+from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
 
 from backend.agent.agentic_rag import legal_agentic_rag
-from backend.db.mongo_manager import mongo_manager
 from backend.auth import get_current_user
 from backend.config import get_plan_question_limit
+from backend.db.mongo_manager import mongo_manager
 from backend.schemas.chat import ChatRequest, ChatResponse
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/chat", tags=["Agent Inference"])
 
+
 @router.post("", response_model=ChatResponse)
 def chat_endpoint(
     payload: ChatRequest,
-    current_user: Dict[str, Any] = Depends(get_current_user),
-) -> Dict[str, Any]:
+    current_user: dict[str, Any] = Depends(get_current_user),
+) -> dict[str, Any]:
     """
     Main Agentic-RAG Chat Endpoint (Batch).
     Performs Query Analysis -> Hybrid Retrieval on Qdrant Cloud -> Legal Grounding -> Persists in MongoDB.
@@ -83,12 +85,13 @@ def chat_endpoint(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error executing Legal Agentic-RAG pipeline: {str(e)}",
-        )
+        ) from e
+
 
 @router.post("/stream")
 def chat_stream_endpoint(
     payload: ChatRequest,
-    current_user: Dict[str, Any] = Depends(get_current_user),
+    current_user: dict[str, Any] = Depends(get_current_user),
 ):
     """
     Real-Time Streaming Agentic-RAG Chat Endpoint (SSE).

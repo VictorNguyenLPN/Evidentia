@@ -1,9 +1,11 @@
 import logging
-from typing import List, Any
+from typing import Any
+
 # pyrefly: ignore [missing-import]
-from fastembed import TextEmbedding, SparseTextEmbedding
+from fastembed import SparseTextEmbedding, TextEmbedding
 
 logger = logging.getLogger(__name__)
+
 
 class EmbeddingService:
     """
@@ -11,10 +13,11 @@ class EmbeddingService:
     - Dense Embeddings: intfloat/multilingual-e5-large (1024 dim) or supported FastEmbed models
     - Sparse Embeddings / BM25: Qdrant/bm25
     """
+
     def __init__(
         self,
         dense_model_name: str = "intfloat/multilingual-e5-large",
-        sparse_model_name: str = "Qdrant/bm25"
+        sparse_model_name: str = "Qdrant/bm25",
     ):
         self.dense_model_name = dense_model_name
         self.sparse_model_name = sparse_model_name
@@ -52,7 +55,7 @@ class EmbeddingService:
                 self._dimension = len(test_emb)
         return self._dimension
 
-    def embed_passages_dense(self, texts: List[str], batch_size: int = 32) -> List[List[float]]:
+    def embed_passages_dense(self, texts: list[str], batch_size: int = 32) -> list[list[float]]:
         """
         Embed passages/chunks using E5 passage prefix.
         """
@@ -60,7 +63,7 @@ class EmbeddingService:
         embeddings = list(self.dense_model.embed(prefixed_texts, batch_size=batch_size))
         return [emb.tolist() for emb in embeddings]
 
-    def embed_query_dense(self, query: str) -> List[float]:
+    def embed_query_dense(self, query: str) -> list[float]:
         """
         Embed search query using E5 query prefix.
         """
@@ -68,7 +71,7 @@ class EmbeddingService:
         embedding = list(self.dense_model.embed([prefixed_query]))[0]
         return embedding.tolist()
 
-    def embed_passages_sparse(self, texts: List[str], batch_size: int = 32) -> List[Any]:
+    def embed_passages_sparse(self, texts: list[str], batch_size: int = 32) -> list[Any]:
         """
         Embed passages to sparse vectors (BM25 indices and values).
         """
@@ -81,6 +84,7 @@ class EmbeddingService:
         """
         embedding = list(self.sparse_model.embed([query]))[0]
         return embedding
+
 
 # Singleton instance
 embedding_service = EmbeddingService()

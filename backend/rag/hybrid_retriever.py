@@ -1,19 +1,17 @@
 import logging
 from datetime import datetime
-from typing import List, Dict, Any, Optional
+from typing import Any
+
 # pyrefly: ignore [missing-import]
 from qdrant_client.http import models
 
-from backend.rag.qdrant_manager import (
-    qdrant_manager,
-    DENSE_VECTOR_NAME,
-    SPARSE_VECTOR_NAME
-)
 from backend.rag.embeddings import embedding_service
+from backend.rag.qdrant_manager import DENSE_VECTOR_NAME, SPARSE_VECTOR_NAME, qdrant_manager
 
 logger = logging.getLogger(__name__)
 
-def _normalize_iso_date(date_str: Optional[str]) -> Optional[str]:
+
+def _normalize_iso_date(date_str: str | None) -> str | None:
     """
     Normalize various date string formats (e.g. 2020/10/20, 2020-10-20, 2020) to ISO-8601 string.
     """
@@ -39,6 +37,7 @@ def _normalize_iso_date(date_str: Optional[str]) -> Optional[str]:
             continue
     return None
 
+
 class HybridRetriever:
     """
     Hybrid Retriever combining:
@@ -47,15 +46,16 @@ class HybridRetriever:
     - Fusion using Reciprocal Rank Fusion (RRF)
     - Temporal Filtering (effect_date <= target_date < expire_date)
     """
+
     def __init__(self, manager=qdrant_manager):
         self.manager = manager
 
     def _build_temporal_filter(
         self,
-        target_date: Optional[str] = None,
-        doc_type: Optional[str] = None,
-        doc_title_keyword: Optional[str] = None
-    ) -> Optional[models.Filter]:
+        target_date: str | None = None,
+        doc_type: str | None = None,
+        doc_title_keyword: str | None = None,
+    ) -> models.Filter | None:
         """
         Build Qdrant Filter conditions for temporal constraints and metadata.
         """
@@ -67,24 +67,19 @@ class HybridRetriever:
             if norm_date:
                 must_conditions.append(
                     models.FieldCondition(
-                        key="effect_date",
-                        range=models.DatetimeRange(lte=norm_date)
+                        key="effect_date", range=models.DatetimeRange(lte=norm_date)
                     )
                 )
 
         if doc_type:
             must_conditions.append(
-                models.FieldCondition(
-                    key="document_type",
-                    match=models.MatchValue(value=doc_type)
-                )
+                models.FieldCondition(key="document_type", match=models.MatchValue(value=doc_type))
             )
 
         if doc_title_keyword:
             must_conditions.append(
                 models.FieldCondition(
-                    key="document_title",
-                    match=models.MatchText(text=doc_title_keyword)
+                    key="document_title", match=models.MatchText(text=doc_title_keyword)
                 )
             )
 
@@ -95,10 +90,10 @@ class HybridRetriever:
     def search(
         self,
         query: str,
-        target_date: Optional[str] = None,
+        target_date: str | None = None,
         top_k: int = 5,
-        doc_type: Optional[str] = None
-    ) -> List[Dict[str, Any]]:
+        doc_type: str | None = None,
+    ) -> list[dict[str, Any]]:
         """
         Execute Hybrid Search on Qdrant Cloud.
         """
@@ -110,8 +105,7 @@ class HybridRetriever:
         sparse_query_res = embedding_service.embed_query_sparse(query)
 
         sparse_query_vector = models.SparseVector(
-            indices=sparse_query_res.indices.tolist(),
-            values=sparse_query_res.values.tolist()
+            indices=sparse_query_res.indices.tolist(), values=sparse_query_res.values.tolist()
         )
 
         query_filter = self._build_temporal_filter(target_date=target_date, doc_type=doc_type)
@@ -125,52 +119,55 @@ class HybridRetriever:
                         query=dense_query_vector,
                         using=DENSE_VECTOR_NAME,
                         limit=top_k * 2,
-                        filter=query_filter
+                        filter=query_filter,
                     ),
                     models.Prefetch(
                         query=sparse_query_vector,
                         using=SPARSE_VECTOR_NAME,
                         limit=top_k * 2,
-                        filter=query_filter
+                        filter=query_filter,
                     ),
                 ],
                 query=models.FusionQuery(fusion=models.Fusion.RRF),
-                limit=top_k
+                limit=top_k,
             )
 
             results = []
             for point in response.points:
                 payload = point.payload or {}
-                results.append({
-                    "id": str(point.id),
-                    "score": float(point.score) if point.score is not None else 0.0,
-                    "chunk_id": payload.get("chunk_id"),
-                    "text": payload.get("text", ""),
-                    "node_type": payload.get("node_type"),
-                    "document_id": payload.get("document_id"),
-                    "document_title": payload.get("document_title"),
-                    "doc_identity": payload.get("doc_identity"),
-                    "document_type": payload.get("document_type"),
-                    "issue_date": payload.get("issue_date"),
-                    "effect_date": payload.get("effect_date"),
-                    "expire_date": payload.get("expire_date"),
-                    "effect_status_name": payload.get("effect_status_name"),
-                    "hierarchy_path": payload.get("hierarchy_path", []),
-                    "article_number": payload.get("article_number"),
-                    "article_title": payload.get("article_title"),
-                    "clause_number": payload.get("clause_number"),
-                    "point": payload.get("point"),
-                    "lead_in_text": payload.get("lead_in_text"),
-                    "organ_names": payload.get("organ_names", []),
-                    "vbpl_url": payload.get("vbpl_url"),
-                    "amendment_notes": payload.get("amendment_notes", [])
-                })
+                results.append(
+                    {
+                        "id": str(point.id),
+                        "score": float(point.score) if point.score is not None else 0.0,
+                        "chunk_id": payload.get("chunk_id"),
+                        "text": payload.get("text", ""),
+                        "node_type": payload.get("node_type"),
+                        "document_id": payload.get("document_id"),
+                        "document_title": payload.get("document_title"),
+                        "doc_identity": payload.get("doc_identity"),
+                        "document_type": payload.get("document_type"),
+                        "issue_date": payload.get("issue_date"),
+                        "effect_date": payload.get("effect_date"),
+                        "expire_date": payload.get("expire_date"),
+                        "effect_status_name": payload.get("effect_status_name"),
+                        "hierarchy_path": payload.get("hierarchy_path", []),
+                        "article_number": payload.get("article_number"),
+                        "article_title": payload.get("article_title"),
+                        "clause_number": payload.get("clause_number"),
+                        "point": payload.get("point"),
+                        "lead_in_text": payload.get("lead_in_text"),
+                        "organ_names": payload.get("organ_names", []),
+                        "vbpl_url": payload.get("vbpl_url"),
+                        "amendment_notes": payload.get("amendment_notes", []),
+                    }
+                )
 
             return results
 
         except Exception as e:
             logger.error(f"Error executing hybrid search on Qdrant Cloud: {e}", exc_info=True)
             raise e
+
 
 # Singleton instance
 hybrid_retriever = HybridRetriever()

@@ -8,18 +8,15 @@ import {
   EyeOff,
   LogIn,
   UserPlus,
-  Sparkles,
   AlertCircle,
 } from 'lucide-react';
 import { useAuth } from '../contexts';
 import { getErrorMessage } from '../utils/error';
-import Button from './Button';
 
 export const AuthModal: React.FC = () => {
   const {
     isAuthModalOpen,
     authModalTab,
-    isGuestLimitReached,
     openAuthModal,
     closeAuthModal,
     login,
@@ -105,21 +102,6 @@ export const AuthModal: React.FC = () => {
       }
     } catch (err: unknown) {
       setErrorMsg(getErrorMessage(err, 'Đã có lỗi xảy ra. Vui lòng thử lại.'));
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleDemoLogin = async () => {
-    setIsSubmitting(true);
-    setErrorMsg(null);
-    try {
-      await login({
-        email: 'huy.nguyen@evidentia.vn',
-        password: 'Evidentia@2026',
-      });
-    } catch (err: unknown) {
-      setErrorMsg(getErrorMessage(err, 'Không thể đăng nhập tài khoản mẫu.'));
     } finally {
       setIsSubmitting(false);
     }

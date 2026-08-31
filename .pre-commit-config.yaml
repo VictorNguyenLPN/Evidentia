@@ -1,0 +1,31 @@
+# See https://pre-commit.com for more information
+repos:
+  # General file hygiene
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: '\.(txt|md|csv)$'
+      - id: end-of-file-fixer
+        exclude: '\.(txt|md|csv)$'
+      - id: check-yaml
+      - id: check-json
+        exclude: 'tsconfig.*\.json$'
+      - id: check-added-large-files
+        args: ['--maxkb=1024']
+
+  # Ruff for Python (Fast Linting & Formatting)
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.5.5
+    hooks:
+      - id: ruff
+        args: [--fix]
+      - id: ruff-format
+
+  # Commit Message Convention Enforcement
+  - repo: https://github.com/compilerla/conventional-pre-commit
+    rev: v3.2.0
+    hooks:
+      - id: conventional-pre-commit
+        stages: [commit-msg]
+        args: [feat, fix, docs, refactor, style, test, chore]

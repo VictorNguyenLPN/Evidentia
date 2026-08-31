@@ -1,13 +1,15 @@
 import logging
 import uuid
 from datetime import datetime
-from typing import List, Dict, Any, Optional
+from typing import Any
+
 import bcrypt
 
-from backend.db.connection import MongoConnectionManager
 from backend.config import get_plan_question_limit
+from backend.db.connection import MongoConnectionManager
 
 logger = logging.getLogger(__name__)
+
 
 class UserRepository:
     def __init__(self, conn: MongoConnectionManager):
@@ -61,7 +63,7 @@ class UserRepository:
             except Exception as e:
                 logger.warning(f"Note on initializing default user in MongoDB: {e}")
 
-    def get_user_by_email(self, email: str) -> Optional[Dict[str, Any]]:
+    def get_user_by_email(self, email: str) -> dict[str, Any] | None:
         if not email:
             return None
         clean_email = email.strip().lower()
@@ -80,7 +82,7 @@ class UserRepository:
                 return dict(u)
         return None
 
-    def get_user_by_id(self, user_id: str) -> Optional[Dict[str, Any]]:
+    def get_user_by_id(self, user_id: str) -> dict[str, Any] | None:
         if not user_id:
             return None
         col = self.conn.get_users_collection()
@@ -104,7 +106,7 @@ class UserRepository:
         full_name: str,
         role: str = "user",
         plan: str = "free",
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         clean_email = email.strip().lower()
         user_id = f"usr_{uuid.uuid4().hex[:12]}"
         now = datetime.now()
@@ -136,10 +138,10 @@ class UserRepository:
     def update_user_profile(
         self,
         user_id: str,
-        full_name: Optional[str] = None,
-        avatar: Optional[str] = None,
-    ) -> Optional[Dict[str, Any]]:
-        updates: Dict[str, Any] = {"updated_at": datetime.now()}
+        full_name: str | None = None,
+        avatar: str | None = None,
+    ) -> dict[str, Any] | None:
+        updates: dict[str, Any] = {"updated_at": datetime.now()}
         if full_name is not None:
             updates["full_name"] = full_name.strip()
         if avatar is not None:
@@ -185,14 +187,14 @@ class UserRepository:
 
     def get_all_users_admin(
         self,
-        query: Optional[str] = None,
-        role: Optional[str] = None,
-        plan: Optional[str] = None,
+        query: str | None = None,
+        role: str | None = None,
+        plan: str | None = None,
         limit: int = 100,
         skip: int = 0,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         col = self.conn.get_users_collection()
-        filter_doc: Dict[str, Any] = {}
+        filter_doc: dict[str, Any] = {}
 
         if role and role.strip() and role != "all":
             filter_doc["role"] = role.strip()
@@ -206,7 +208,7 @@ class UserRepository:
                 {"id": regex_q},
             ]
 
-        users: List[Dict[str, Any]] = []
+        users: list[dict[str, Any]] = []
         total = 0
 
         if col is not None:
@@ -236,7 +238,8 @@ class UserRepository:
         if query and query.strip():
             q_lower = query.strip().lower()
             filtered = [
-                u for u in filtered
+                u
+                for u in filtered
                 if q_lower in u.get("email", "").lower()
                 or q_lower in u.get("full_name", "").lower()
                 or q_lower in u.get("id", "").lower()
@@ -264,7 +267,7 @@ class UserRepository:
         full_name: str,
         role: str = "user",
         plan: str = "free",
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         return self.create_user(
             email=email,
             password_hash=password_hash,
@@ -273,7 +276,7 @@ class UserRepository:
             plan=plan,
         )
 
-    def admin_update_user(self, user_id: str, updates: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    def admin_update_user(self, user_id: str, updates: dict[str, Any]) -> dict[str, Any] | None:
         clean_updates = {k: v for k, v in updates.items() if v is not None}
         clean_updates["updated_at"] = datetime.now()
 
@@ -319,7 +322,9 @@ class UserRepository:
             self.conn._fallback_users.pop(k, None)
 
         if delete_chats:
-            to_del_chats = [cid for cid, c in self.conn._fallback_chats.items() if c.get("user_id") == user_id]
+            to_del_chats = [
+                cid for cid, c in self.conn._fallback_chats.items() if c.get("user_id") == user_id
+            ]
             for cid in to_del_chats:
                 self.conn._fallback_chats.pop(cid, None)
 
@@ -378,7 +383,7 @@ class UserRepository:
             self.conn._fallback_users[user_id]["questions_used"] = 0
             self.conn._fallback_users[user_id]["updated_at"] = datetime.now()
             return True
-        for uid, u in self.conn._fallback_users.items():
+        for _uid, u in self.conn._fallback_users.items():
             if u.get("email") == user_id:
                 u["questions_used"] = 0
                 u["updated_at"] = datetime.now()
@@ -388,11 +393,11 @@ class UserRepository:
     def reset_user_question_count_by_identifier(self, identifier: str) -> bool:
         return self.reset_user_question_count(identifier)
 
-    def reset_all_users_question_count(self, plan: Optional[str] = None) -> int:
+    def reset_all_users_question_count(self, plan: str | None = None) -> int:
         """
         Reset questions_used to 0 for all users, or users matching a specific plan.
         """
-        filter_doc: Dict[str, Any] = {}
+        filter_doc: dict[str, Any] = {}
         if plan and plan.lower() != "all":
             filter_doc["plan"] = plan.lower()
 
@@ -409,7 +414,7 @@ class UserRepository:
                 logger.error(f"Error resetting all users question count in MongoDB: {e}")
 
         # In-memory fallback
-        for uid, u in self.conn._fallback_users.items():
+        for _uid, u in self.conn._fallback_users.items():
             if plan and plan.lower() != "all" and u.get("plan", "free").lower() != plan.lower():
                 continue
             u["questions_used"] = 0
@@ -420,20 +425,20 @@ class UserRepository:
 
     def get_user_quotas_admin(
         self,
-        query: Optional[str] = None,
-        plan: Optional[str] = None,
+        query: str | None = None,
+        plan: str | None = None,
         limit: int = 100,
         skip: int = 0,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Return user quota and usage metrics for all users, with computed limits and remaining counts.
         """
         col = self.conn.get_users_collection()
-        user_list: List[Dict[str, Any]] = []
+        user_list: list[dict[str, Any]] = []
 
         if col is not None:
             try:
-                mongo_filter: Dict[str, Any] = {}
+                mongo_filter: dict[str, Any] = {}
                 if plan and plan.lower() != "all":
                     mongo_filter["plan"] = plan.lower()
                 if query and query.strip():
@@ -459,19 +464,27 @@ class UserRepository:
                     q_used = int(doc.get("questions_used", 0))
                     p_limit = get_plan_question_limit(p, r)
 
-                    user_list.append({
-                        "id": doc_id,
-                        "email": doc.get("email", ""),
-                        "full_name": doc.get("full_name", ""),
-                        "role": r,
-                        "plan": p,
-                        "questions_used": q_used,
-                        "questions_limit": p_limit,
-                        "questions_remaining": -1 if p_limit == -1 else max(0, p_limit - q_used),
-                        "limit_reached": (q_used >= p_limit) if p_limit != -1 else False,
-                        "created_at": doc.get("created_at").isoformat() if isinstance(doc.get("created_at"), datetime) else doc.get("created_at"),
-                        "updated_at": doc.get("updated_at").isoformat() if isinstance(doc.get("updated_at"), datetime) else doc.get("updated_at"),
-                    })
+                    user_list.append(
+                        {
+                            "id": doc_id,
+                            "email": doc.get("email", ""),
+                            "full_name": doc.get("full_name", ""),
+                            "role": r,
+                            "plan": p,
+                            "questions_used": q_used,
+                            "questions_limit": p_limit,
+                            "questions_remaining": -1
+                            if p_limit == -1
+                            else max(0, p_limit - q_used),
+                            "limit_reached": (q_used >= p_limit) if p_limit != -1 else False,
+                            "created_at": doc.get("created_at").isoformat()
+                            if isinstance(doc.get("created_at"), datetime)
+                            else doc.get("created_at"),
+                            "updated_at": doc.get("updated_at").isoformat()
+                            if isinstance(doc.get("updated_at"), datetime)
+                            else doc.get("updated_at"),
+                        }
+                    )
 
                 return {"user_quotas": user_list, "total": total}
             except Exception as e:
@@ -500,20 +513,24 @@ class UserRepository:
             r = u.get("role", "user")
             q_used = int(u.get("questions_used", 0))
             p_limit = get_plan_question_limit(p, r)
-            user_list.append({
-                "id": u.get("id", ""),
-                "email": u.get("email", ""),
-                "full_name": u.get("full_name", ""),
-                "role": r,
-                "plan": p,
-                "questions_used": q_used,
-                "questions_limit": p_limit,
-                "questions_remaining": -1 if p_limit == -1 else max(0, p_limit - q_used),
-                "limit_reached": (q_used >= p_limit) if p_limit != -1 else False,
-                "created_at": u.get("created_at").isoformat() if isinstance(u.get("created_at"), datetime) else u.get("created_at"),
-                "updated_at": u.get("updated_at").isoformat() if isinstance(u.get("updated_at"), datetime) else u.get("updated_at"),
-            })
+            user_list.append(
+                {
+                    "id": u.get("id", ""),
+                    "email": u.get("email", ""),
+                    "full_name": u.get("full_name", ""),
+                    "role": r,
+                    "plan": p,
+                    "questions_used": q_used,
+                    "questions_limit": p_limit,
+                    "questions_remaining": -1 if p_limit == -1 else max(0, p_limit - q_used),
+                    "limit_reached": (q_used >= p_limit) if p_limit != -1 else False,
+                    "created_at": u.get("created_at").isoformat()
+                    if isinstance(u.get("created_at"), datetime)
+                    else u.get("created_at"),
+                    "updated_at": u.get("updated_at").isoformat()
+                    if isinstance(u.get("updated_at"), datetime)
+                    else u.get("updated_at"),
+                }
+            )
 
         return {"user_quotas": user_list, "total": total}
-
-

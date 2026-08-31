@@ -2,19 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   ArrowRight,
   BookOpen,
-  Sparkles,
-  Bot,
-  Brain,
-  GitCompare,
-  Clock,
-  ShieldCheck,
-  Search,
-  Layers,
-  CheckCircle2,
-  Cpu,
   ChevronRight,
-  Zap,
-  FileText,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -363,4 +351,3 @@ export const LandingPage: React.FC = () => {
 };
 
 export default LandingPage;
-

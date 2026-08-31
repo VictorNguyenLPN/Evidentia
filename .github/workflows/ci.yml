@@ -1,0 +1,118 @@
+name: Continuous Integration (CI)
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # =========================================================================
+  # 1. BACKEND CI (Python / FastAPI / Ruff / Pytest)
+  # =========================================================================
+  backend-ci:
+    name: Backend Lint & Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+
+      - name: Check Code Formatting & Linting (Ruff)
+        run: |
+          ruff format --check backend/ tests/
+          ruff check backend/ tests/
+
+      - name: Run Pytest Test Suite
+        env:
+          ENVIRONMENT: testing
+          JWT_SECRET_KEY: ci-test-secret-key-for-github-actions-32bytes
+        run: |
+          pytest --cov=backend --cov-report=term-missing tests/
+
+  # =========================================================================
+  # 2. FRONTEND CI (React / TypeScript / ESLint / Vite Build)
+  # =========================================================================
+  frontend-ci:
+    name: Frontend Lint & Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install Frontend Dependencies
+        working-directory: ./frontend
+        run: npm ci
+
+      - name: Run ESLint
+        working-directory: ./frontend
+        run: npm run lint
+
+      - name: Build Frontend Production Bundle
+        working-directory: ./frontend
+        run: npm run build
+
+  # =========================================================================
+  # 3. ADMIN DASHBOARD CI (React / TypeScript / Vite Build)
+  # =========================================================================
+  admin-dashboard-ci:
+    name: Admin Dashboard Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm"
+          cache-dependency-path: admin-dashboard/package-lock.json
+
+      - name: Install Admin Dashboard Dependencies
+        working-directory: ./admin-dashboard
+        run: npm ci
+
+      - name: Build Admin Dashboard Production Bundle
+        working-directory: ./admin-dashboard
+        run: npm run build
+
+  # =========================================================================
+  # 4. SECURITY & SECRET SCANNING (Gitleaks)
+  # =========================================================================
+  secret-scan:
+    name: Secret Leak Detection
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run Gitleaks Scanner
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true

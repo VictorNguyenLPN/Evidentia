@@ -2,13 +2,14 @@ import hashlib
 import logging
 import uuid
 from datetime import datetime
-from typing import List, Dict, Any, Optional
+from typing import Any
 
 from backend.db.connection import MongoConnectionManager
 
 logger = logging.getLogger(__name__)
 
-def generate_chat_id(email: str = "huy.nguyen@evidentia.vn", dt: Optional[datetime] = None) -> str:
+
+def generate_chat_id(email: str = "huy.nguyen@evidentia.vn", dt: datetime | None = None) -> str:
     """
     Generate a 16-character hex hash from user email + timestamp as fallback chat ID.
     """
@@ -16,6 +17,7 @@ def generate_chat_id(email: str = "huy.nguyen@evidentia.vn", dt: Optional[dateti
         dt = datetime.now()
     raw = f"{email}::{dt.timestamp()}::{uuid.uuid4().hex[:6]}"
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()[:16]
+
 
 class ChatRepository:
     def __init__(self, conn: MongoConnectionManager):
@@ -43,7 +45,7 @@ class ChatRepository:
         else:
             return updated.strftime("%d/%m/%Y")
 
-    def get_all_chats(self, user_id: Optional[str] = None) -> List[Dict[str, Any]]:
+    def get_all_chats(self, user_id: str | None = None) -> list[dict[str, Any]]:
         """
         List all chat sessions with summary metadata, sorted by pinned and updated_at.
         Filters strictly by user_id for multi-user data isolation.
@@ -52,11 +54,11 @@ class ChatRepository:
             return []
 
         col = self.conn.get_chats_collection()
-        results: List[Dict[str, Any]] = []
+        results: list[dict[str, Any]] = []
 
         if col is not None:
             try:
-                filter_doc: Dict[str, Any] = {"user_id": user_id}
+                filter_doc: dict[str, Any] = {"user_id": user_id}
 
                 cursor = col.find(
                     filter_doc,
@@ -74,19 +76,27 @@ class ChatRepository:
                 ).sort([("is_pinned", -1), ("updated_at", -1)])
 
                 for doc in cursor:
-                    results.append({
-                        "id": doc.get("id"),
-                        "title": doc.get("title", "Cuộc trò chuyện mới"),
-                        "time": self._format_relative_time(doc.get("updated_at")),
-                        "tag": doc.get("tag") or "Pháp luật",
-                        "is_pinned": doc.get("is_pinned", False),
-                        "isPinned": doc.get("is_pinned", False),
-                        "is_shared": doc.get("is_shared", False),
-                        "shared_at": doc.get("shared_at").isoformat() if isinstance(doc.get("shared_at"), datetime) else doc.get("shared_at"),
-                        "user_id": doc.get("user_id"),
-                        "created_at": doc.get("created_at").isoformat() if isinstance(doc.get("created_at"), datetime) else doc.get("created_at"),
-                        "updated_at": doc.get("updated_at").isoformat() if isinstance(doc.get("updated_at"), datetime) else doc.get("updated_at"),
-                    })
+                    results.append(
+                        {
+                            "id": doc.get("id"),
+                            "title": doc.get("title", "Cuộc trò chuyện mới"),
+                            "time": self._format_relative_time(doc.get("updated_at")),
+                            "tag": doc.get("tag") or "Pháp luật",
+                            "is_pinned": doc.get("is_pinned", False),
+                            "isPinned": doc.get("is_pinned", False),
+                            "is_shared": doc.get("is_shared", False),
+                            "shared_at": doc.get("shared_at").isoformat()
+                            if isinstance(doc.get("shared_at"), datetime)
+                            else doc.get("shared_at"),
+                            "user_id": doc.get("user_id"),
+                            "created_at": doc.get("created_at").isoformat()
+                            if isinstance(doc.get("created_at"), datetime)
+                            else doc.get("created_at"),
+                            "updated_at": doc.get("updated_at").isoformat()
+                            if isinstance(doc.get("updated_at"), datetime)
+                            else doc.get("updated_at"),
+                        }
+                    )
                 return results
             except Exception as e:
                 logger.error(f"Error fetching chats from MongoDB: {e}")
@@ -95,31 +105,37 @@ class ChatRepository:
         for chat_id, doc in self.conn._fallback_chats.items():
             if doc.get("user_id") != user_id:
                 continue
-            results.append({
-                "id": chat_id,
-                "title": doc.get("title", "Cuộc trò chuyện mới"),
-                "time": self._format_relative_time(doc.get("updated_at")),
-                "tag": doc.get("tag") or "Pháp luật",
-                "is_pinned": doc.get("is_pinned", False),
-                "isPinned": doc.get("is_pinned", False),
-                "is_shared": doc.get("is_shared", False),
-                "shared_at": doc.get("shared_at"),
-                "user_id": doc.get("user_id"),
-                "created_at": doc.get("created_at").isoformat() if isinstance(doc.get("created_at"), datetime) else doc.get("created_at"),
-                "updated_at": doc.get("updated_at").isoformat() if isinstance(doc.get("updated_at"), datetime) else doc.get("updated_at"),
-            })
+            results.append(
+                {
+                    "id": chat_id,
+                    "title": doc.get("title", "Cuộc trò chuyện mới"),
+                    "time": self._format_relative_time(doc.get("updated_at")),
+                    "tag": doc.get("tag") or "Pháp luật",
+                    "is_pinned": doc.get("is_pinned", False),
+                    "isPinned": doc.get("is_pinned", False),
+                    "is_shared": doc.get("is_shared", False),
+                    "shared_at": doc.get("shared_at"),
+                    "user_id": doc.get("user_id"),
+                    "created_at": doc.get("created_at").isoformat()
+                    if isinstance(doc.get("created_at"), datetime)
+                    else doc.get("created_at"),
+                    "updated_at": doc.get("updated_at").isoformat()
+                    if isinstance(doc.get("updated_at"), datetime)
+                    else doc.get("updated_at"),
+                }
+            )
 
         results.sort(key=lambda x: (not x.get("is_pinned", False), x.get("updated_at", "")))
         return results
 
-    def get_chat(self, chat_id: str, user_id: Optional[str] = None) -> Optional[Dict[str, Any]]:
+    def get_chat(self, chat_id: str, user_id: str | None = None) -> dict[str, Any] | None:
         """
         Get full chat session by ID.
         """
         col = self.conn.get_chats_collection()
         if col is not None:
             try:
-                filter_doc: Dict[str, Any] = {"id": chat_id}
+                filter_doc: dict[str, Any] = {"id": chat_id}
                 doc = col.find_one(filter_doc, {"_id": 0})
                 if doc:
                     if isinstance(doc.get("created_at"), datetime):
@@ -147,8 +163,8 @@ class ChatRepository:
     def get_chat_with_permission(
         self,
         chat_id: str,
-        current_user_id: Optional[str] = None,
-    ) -> Optional[Dict[str, Any]]:
+        current_user_id: str | None = None,
+    ) -> dict[str, Any] | None:
         """
         Retrieve chat session with authorization check:
         - If requester is the owner (or chat has no owner) -> return full chat with is_owner=True.
@@ -191,8 +207,8 @@ class ChatRepository:
         self,
         chat_id: str,
         is_shared: bool,
-        user_id: Optional[str] = None,
-    ) -> Optional[Dict[str, Any]]:
+        user_id: str | None = None,
+    ) -> dict[str, Any] | None:
         """
         Update public share status of a chat.
         """
@@ -232,17 +248,17 @@ class ChatRepository:
 
     def save_chat_turn(
         self,
-        chat_id: Optional[str],
+        chat_id: str | None,
         query: str,
         answer: str,
-        target_date: Optional[str] = None,
-        analysis: Optional[Dict[str, Any]] = None,
-        citations: Optional[List[Dict[str, Any]]] = None,
-        steps: Optional[List[Dict[str, Any]]] = None,
-        token_usage: Optional[Dict[str, Any]] = None,
-        user_id: Optional[str] = None,
-        user_email: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        target_date: str | None = None,
+        analysis: dict[str, Any] | None = None,
+        citations: list[dict[str, Any]] | None = None,
+        steps: list[dict[str, Any]] | None = None,
+        token_usage: dict[str, Any] | None = None,
+        user_id: str | None = None,
+        user_email: str | None = None,
+    ) -> dict[str, Any]:
         """
         Save or update a chat session with the user prompt and assistant reply.
         """
@@ -331,7 +347,7 @@ class ChatRepository:
                 "assistant_message": assistant_msg,
             }
 
-    def toggle_pin(self, chat_id: str, user_id: Optional[str] = None) -> bool:
+    def toggle_pin(self, chat_id: str, user_id: str | None = None) -> bool:
         col = self.conn.get_chats_collection()
         doc = self.get_chat(chat_id, user_id=user_id)
         if not doc:
@@ -354,11 +370,11 @@ class ChatRepository:
 
         return new_status
 
-    def delete_chat(self, chat_id: str, user_id: Optional[str] = None) -> bool:
+    def delete_chat(self, chat_id: str, user_id: str | None = None) -> bool:
         col = self.conn.get_chats_collection()
         if col is not None:
             try:
-                filter_doc: Dict[str, Any] = {"id": chat_id}
+                filter_doc: dict[str, Any] = {"id": chat_id}
                 if user_id:
                     filter_doc["user_id"] = user_id
                 col.delete_one(filter_doc)
@@ -371,12 +387,12 @@ class ChatRepository:
 
         return True
 
-    def clear_all_chats(self, user_id: Optional[str] = None) -> int:
+    def clear_all_chats(self, user_id: str | None = None) -> int:
         col = self.conn.get_chats_collection()
         count = 0
         if col is not None:
             try:
-                filter_doc: Dict[str, Any] = {}
+                filter_doc: dict[str, Any] = {}
                 if user_id:
                     filter_doc["user_id"] = user_id
                 res = col.delete_many(filter_doc)
@@ -385,7 +401,9 @@ class ChatRepository:
                 logger.error(f"Error clearing chats in MongoDB: {e}")
 
         if user_id:
-            keys_to_del = [k for k, v in self.conn._fallback_chats.items() if v.get("user_id") == user_id]
+            keys_to_del = [
+                k for k, v in self.conn._fallback_chats.items() if v.get("user_id") == user_id
+            ]
             for k in keys_to_del:
                 del self.conn._fallback_chats[k]
                 count += 1
@@ -395,7 +413,7 @@ class ChatRepository:
 
         return count
 
-    def rename_chat(self, chat_id: str, new_title: str, user_id: Optional[str] = None) -> bool:
+    def rename_chat(self, chat_id: str, new_title: str, user_id: str | None = None) -> bool:
         clean_title = new_title.strip()
         if not clean_title:
             return False
@@ -405,7 +423,7 @@ class ChatRepository:
 
         if col is not None:
             try:
-                filter_doc: Dict[str, Any] = {"id": chat_id}
+                filter_doc: dict[str, Any] = {"id": chat_id}
                 if user_id:
                     filter_doc["user_id"] = user_id
                 col.update_one(filter_doc, {"$set": {"title": clean_title, "updated_at": now}})
@@ -421,15 +439,15 @@ class ChatRepository:
 
     def get_all_chats_admin(
         self,
-        query: Optional[str] = None,
+        query: str | None = None,
         limit: int = 100,
         skip: int = 0,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         List all chat sessions across the entire system for Admin audit.
         """
         col = self.conn.get_chats_collection()
-        filter_doc: Dict[str, Any] = {}
+        filter_doc: dict[str, Any] = {}
 
         if query and query.strip():
             regex_q = {"$regex": query.strip(), "$options": "i"}
@@ -439,7 +457,7 @@ class ChatRepository:
                 {"messages.text": regex_q},
             ]
 
-        chats: List[Dict[str, Any]] = []
+        chats: list[dict[str, Any]] = []
         total = 0
 
         if col is not None:
@@ -457,25 +475,32 @@ class ChatRepository:
                     user_name = None
                     if user_id:
                         from backend.db.mongo_manager import mongo_manager
+
                         u = mongo_manager.get_user_by_id(user_id)
                         if u:
                             user_email = u.get("email")
                             user_name = u.get("full_name")
 
-                    chats.append({
-                        "id": doc.get("id"),
-                        "title": doc.get("title", "Cuộc trò chuyện mới"),
-                        "tag": doc.get("tag") or "Pháp luật",
-                        "is_pinned": doc.get("is_pinned", False),
-                        "is_shared": doc.get("is_shared", False),
-                        "messages_count": msg_count,
-                        "latest_preview": latest_preview,
-                        "user_id": user_id,
-                        "user_email": user_email,
-                        "user_name": user_name,
-                        "created_at": doc.get("created_at").isoformat() if isinstance(doc.get("created_at"), datetime) else doc.get("created_at"),
-                        "updated_at": doc.get("updated_at").isoformat() if isinstance(doc.get("updated_at"), datetime) else doc.get("updated_at"),
-                    })
+                    chats.append(
+                        {
+                            "id": doc.get("id"),
+                            "title": doc.get("title", "Cuộc trò chuyện mới"),
+                            "tag": doc.get("tag") or "Pháp luật",
+                            "is_pinned": doc.get("is_pinned", False),
+                            "is_shared": doc.get("is_shared", False),
+                            "messages_count": msg_count,
+                            "latest_preview": latest_preview,
+                            "user_id": user_id,
+                            "user_email": user_email,
+                            "user_name": user_name,
+                            "created_at": doc.get("created_at").isoformat()
+                            if isinstance(doc.get("created_at"), datetime)
+                            else doc.get("created_at"),
+                            "updated_at": doc.get("updated_at").isoformat()
+                            if isinstance(doc.get("updated_at"), datetime)
+                            else doc.get("updated_at"),
+                        }
+                    )
                 return {"chats": chats, "total": total}
             except Exception as e:
                 logger.error(f"Error fetching chats for admin from MongoDB: {e}")
@@ -485,7 +510,8 @@ class ChatRepository:
         if query and query.strip():
             q_lower = query.strip().lower()
             all_chats = [
-                c for c in all_chats
+                c
+                for c in all_chats
                 if q_lower in c.get("title", "").lower() or q_lower in c.get("id", "").lower()
             ]
 
@@ -494,20 +520,26 @@ class ChatRepository:
 
         for doc in paginated:
             messages = doc.get("messages", [])
-            chats.append({
-                "id": doc.get("id"),
-                "title": doc.get("title", "Cuộc trò chuyện mới"),
-                "tag": doc.get("tag") or "Pháp luật",
-                "is_pinned": doc.get("is_pinned", False),
-                "is_shared": doc.get("is_shared", False),
-                "messages_count": len(messages),
-                "latest_preview": messages[-1].get("text", "")[:100] if messages else "",
-                "user_id": doc.get("user_id"),
-                "user_email": None,
-                "user_name": None,
-                "created_at": doc.get("created_at").isoformat() if isinstance(doc.get("created_at"), datetime) else doc.get("created_at"),
-                "updated_at": doc.get("updated_at").isoformat() if isinstance(doc.get("updated_at"), datetime) else doc.get("updated_at"),
-            })
+            chats.append(
+                {
+                    "id": doc.get("id"),
+                    "title": doc.get("title", "Cuộc trò chuyện mới"),
+                    "tag": doc.get("tag") or "Pháp luật",
+                    "is_pinned": doc.get("is_pinned", False),
+                    "is_shared": doc.get("is_shared", False),
+                    "messages_count": len(messages),
+                    "latest_preview": messages[-1].get("text", "")[:100] if messages else "",
+                    "user_id": doc.get("user_id"),
+                    "user_email": None,
+                    "user_name": None,
+                    "created_at": doc.get("created_at").isoformat()
+                    if isinstance(doc.get("created_at"), datetime)
+                    else doc.get("created_at"),
+                    "updated_at": doc.get("updated_at").isoformat()
+                    if isinstance(doc.get("updated_at"), datetime)
+                    else doc.get("updated_at"),
+                }
+            )
 
         return {"chats": chats, "total": total}
 

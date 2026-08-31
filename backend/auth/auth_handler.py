@@ -1,20 +1,23 @@
 import logging
-from datetime import datetime, timedelta, timezone
-from typing import Optional, Dict, Any
+from datetime import UTC, datetime, timedelta
+from typing import Any
 
 # pyrefly: ignore [missing-import]
 import bcrypt
+
 # pyrefly: ignore [missing-import]
 import jwt
+
 # pyrefly: ignore [missing-import]
 from fastapi import Depends, HTTPException, status
+
 # pyrefly: ignore [missing-import]
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from backend.config import (
-    JWT_SECRET_KEY,
-    JWT_ALGORITHM,
     ACCESS_TOKEN_EXPIRE_MINUTES,
+    JWT_ALGORITHM,
+    JWT_SECRET_KEY,
 )
 
 logger = logging.getLogger(__name__)
@@ -36,23 +39,20 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     Verify plaintext password against bcrypt hashed password.
     """
     try:
-        return bcrypt.checkpw(
-            plain_password.encode("utf-8"),
-            hashed_password.encode("utf-8")
-        )
+        return bcrypt.checkpw(plain_password.encode("utf-8"), hashed_password.encode("utf-8"))
     except Exception as e:
         logger.error(f"Error verifying password: {e}")
         return False
 
 
-def create_access_token(data: Dict[str, Any], expires_delta: Optional[timedelta] = None) -> str:
+def create_access_token(data: dict[str, Any], expires_delta: timedelta | None = None) -> str:
     """
     Create a signed JWT access token containing claims.
     If expires_delta is provided or ACCESS_TOKEN_EXPIRE_MINUTES > 0, an 'exp' claim is set.
     If ACCESS_TOKEN_EXPIRE_MINUTES <= 0 (or 0) and expires_delta is None, the token never expires.
     """
     to_encode = data.copy()
-    now_utc = datetime.now(timezone.utc)
+    now_utc = datetime.now(UTC)
     to_encode.update({"iat": now_utc})
 
     if expires_delta is not None and expires_delta.total_seconds() > 0:
@@ -66,7 +66,7 @@ def create_access_token(data: Dict[str, Any], expires_delta: Optional[timedelta]
     return encoded_jwt
 
 
-def decode_access_token(token: str) -> Optional[Dict[str, Any]]:
+def decode_access_token(token: str) -> dict[str, Any] | None:
     """
     Decode and validate a JWT access token.
     """
@@ -82,8 +82,8 @@ def decode_access_token(token: str) -> Optional[Dict[str, Any]]:
 
 
 async def get_current_user(
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security_bearer)
-) -> Dict[str, Any]:
+    credentials: HTTPAuthorizationCredentials | None = Depends(security_bearer),
+) -> dict[str, Any]:
     """
     FastAPI dependency for strictly requiring an authenticated user.
     """
@@ -111,6 +111,7 @@ async def get_current_user(
         )
 
     from backend.db.mongo_manager import mongo_manager
+
     user = mongo_manager.get_user_by_id(user_id)
     if not user:
         raise HTTPException(
@@ -123,8 +124,8 @@ async def get_current_user(
 
 
 async def get_optional_current_user(
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security_bearer)
-) -> Optional[Dict[str, Any]]:
+    credentials: HTTPAuthorizationCredentials | None = Depends(security_bearer),
+) -> dict[str, Any] | None:
     """
     FastAPI dependency for optional authentication.
     Returns user dict if valid Bearer token provided, else None.
@@ -142,6 +143,7 @@ async def get_optional_current_user(
 
     try:
         from backend.db.mongo_manager import mongo_manager
+
         return mongo_manager.get_user_by_id(user_id)
     except Exception as e:
         logger.error(f"Error fetching user in optional auth: {e}")
@@ -149,8 +151,8 @@ async def get_optional_current_user(
 
 
 async def get_current_admin_user(
-    current_user: Dict[str, Any] = Depends(get_current_user)
-) -> Dict[str, Any]:
+    current_user: dict[str, Any] = Depends(get_current_user),
+) -> dict[str, Any]:
     """
     FastAPI dependency that requires an authenticated user with 'admin' role.
     """
@@ -161,4 +163,3 @@ async def get_current_admin_user(
             detail="Truy cập bị từ chối. Yêu cầu quyền Quản trị viên (Admin).",
         )
     return current_user
-

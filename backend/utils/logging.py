@@ -1,10 +1,12 @@
 import logging
-from typing import Dict, Any
+from typing import Any
+
 
 class ColoredFormatter(logging.Formatter):
     """
     Custom ANSI colored log formatter for terminal output.
     """
+
     RESET = "\033[0m"
     RED = "\033[91m"
     BOLD_RED = "\033[1;91m"
@@ -33,7 +35,7 @@ class ColoredFormatter(logging.Formatter):
         return super().format(record_copy)
 
 
-UVICORN_LOGGING_CONFIG: Dict[str, Any] = {
+UVICORN_LOGGING_CONFIG: dict[str, Any] = {
     "version": 1,
     "disable_existing_loggers": False,
     "formatters": {

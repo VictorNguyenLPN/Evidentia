@@ -1,8 +1,11 @@
-from typing import Optional, Dict, Any
+from typing import Any
+
 from pydantic import BaseModel, Field
+
 from backend.config import get_plan_question_limit
 
-def sanitize_user(user: Dict[str, Any]) -> Dict[str, Any]:
+
+def sanitize_user(user: dict[str, Any]) -> dict[str, Any]:
     """
     Strip sensitive fields like password_hash before returning user data to client.
     Also compute questions_used, questions_limit, questions_remaining, limit_reached.
@@ -22,22 +25,26 @@ def sanitize_user(user: Dict[str, Any]) -> Dict[str, Any]:
         safe["limit_reached"] = False
     else:
         safe["questions_remaining"] = max(0, limit - questions_used)
-        safe["limit_reached"] = (questions_used >= limit)
+        safe["limit_reached"] = questions_used >= limit
 
     return safe
+
 
 class RegisterRequest(BaseModel):
     email: str = Field(..., description="User email address")
     password: str = Field(..., min_length=6, description="Password (at least 6 characters)")
     full_name: str = Field(..., min_length=1, description="Full name")
 
+
 class LoginRequest(BaseModel):
     email: str = Field(..., description="User email address")
     password: str = Field(..., description="User password")
 
+
 class UpdateProfileRequest(BaseModel):
-    full_name: Optional[str] = Field(None, min_length=1, description="Full name")
-    avatar: Optional[str] = Field(None, description="Avatar image URL or identifier")
+    full_name: str | None = Field(None, min_length=1, description="Full name")
+    avatar: str | None = Field(None, description="Avatar image URL or identifier")
+
 
 class ChangePasswordRequest(BaseModel):
     current_password: str = Field(..., min_length=1, description="Current password")

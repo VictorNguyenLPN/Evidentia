@@ -3,28 +3,29 @@ import logging.config
 import sys
 from contextlib import asynccontextmanager
 from pathlib import Path
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from backend.agent.gemini_llm import gemini_client
 from backend.config import (
     DATA_PATH,
     HOST,
     PORT,
 )
-from backend.utils.logging import UVICORN_LOGGING_CONFIG
-from backend.rag.qdrant_manager import qdrant_manager
-from backend.agent.gemini_llm import gemini_client
 from backend.db.mongo_manager import mongo_manager
+from backend.rag.qdrant_manager import qdrant_manager
 
 # Routers
 from backend.routers import (
-    status_router,
-    auth_router,
-    chats_router,
-    chat_inference_router,
-    laws_router,
     admin_router,
+    auth_router,
+    chat_inference_router,
+    chats_router,
+    laws_router,
+    status_router,
 )
+from backend.utils.logging import UVICORN_LOGGING_CONFIG
 
 # Configure unified logging across root, application, and uvicorn
 logging.config.dictConfig(UVICORN_LOGGING_CONFIG)
@@ -32,6 +33,7 @@ logging.getLogger("httpx").setLevel(logging.WARNING)
 logging.getLogger("httpcore").setLevel(logging.WARNING)
 
 logger = logging.getLogger("evidentia.backend")
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -63,6 +65,7 @@ async def lifespan(app: FastAPI):
     yield
     print("")
 
+
 app = FastAPI(
     title="Evidentia Legal Agentic-RAG API",
     description="Agentic System for Temporal Retrieval and Verification of Vietnamese Legal Documents",
@@ -89,13 +92,20 @@ app.include_router(admin_router)
 
 if __name__ == "__main__":
     import argparse
+
     import uvicorn
 
     parser = argparse.ArgumentParser(description="Evidentia Legal Agentic-RAG API Service")
-    parser.add_argument("--host", type=str, default=HOST, help=f"Host interface to bind (default: {HOST})")
+    parser.add_argument(
+        "--host", type=str, default=HOST, help=f"Host interface to bind (default: {HOST})"
+    )
     parser.add_argument("--port", type=int, default=PORT, help=f"Port to bind (default: {PORT})")
-    parser.add_argument("--reload", action="store_true", default=True, help="Enable auto-reload on code changes")
-    parser.add_argument("--no-reload", dest="reload", action="store_false", help="Disable auto-reload")
+    parser.add_argument(
+        "--reload", action="store_true", default=True, help="Enable auto-reload on code changes"
+    )
+    parser.add_argument(
+        "--no-reload", dest="reload", action="store_false", help="Disable auto-reload"
+    )
     parser.add_argument(
         "--ingest-qdrant",
         action="store_true",
@@ -117,7 +127,9 @@ if __name__ == "__main__":
     data_path_override = Path(args.data_path)
 
     if args.ingest_qdrant:
-        logger.info(f"CLI trigger: Ingesting dataset into Qdrant Cloud from {data_path_override}...")
+        logger.info(
+            f"CLI trigger: Ingesting dataset into Qdrant Cloud from {data_path_override}..."
+        )
         try:
             res = qdrant_manager.ingest_dataset(data_path=data_path_override)
             logger.info(f"Qdrant Ingest Result: {res}")

@@ -2,12 +2,13 @@ import json
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import List, Dict, Any, Optional, Tuple
+from typing import Any
 
 from backend.config import DATA_PATH
 from backend.db.connection import MongoConnectionManager
 
 logger = logging.getLogger(__name__)
+
 
 class LawRepository:
     def __init__(self, conn: MongoConnectionManager):
@@ -15,13 +16,13 @@ class LawRepository:
 
     def _structure_law_data(
         self,
-        chunks: List[Dict[str, Any]],
-    ) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+        chunks: list[dict[str, Any]],
+    ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
         """
         Transform flat legal chunks into structured laws and articles collections.
         """
-        laws_map: Dict[str, Dict[str, Any]] = {}
-        articles_map: Dict[str, Dict[str, Any]] = {}
+        laws_map: dict[str, dict[str, Any]] = {}
+        articles_map: dict[str, dict[str, Any]] = {}
 
         for chunk in chunks:
             meta = chunk.get("metadata", {})
@@ -102,28 +103,30 @@ class LawRepository:
             doc_articles = [a for a in articles_map.values() if a.get("document_id") == doc_id]
             doc_articles.sort(key=lambda x: x.get("article_number", 0))
 
-            toc_structure: List[Dict[str, Any]] = []
+            toc_structure: list[dict[str, Any]] = []
             for a in doc_articles:
                 h_path = a.get("hierarchy_path", [])
-                toc_structure.append({
-                    "article_number": a.get("article_number"),
-                    "article_title": a.get("article_title"),
-                    "hierarchy_path": h_path,
-                })
+                toc_structure.append(
+                    {
+                        "article_number": a.get("article_number"),
+                        "article_title": a.get("article_title"),
+                        "hierarchy_path": h_path,
+                    }
+                )
             law["hierarchy"] = toc_structure
 
         return list(laws_map.values()), list(articles_map.values())
 
-    def sync_laws_on_startup(self, data_path: Any = DATA_PATH) -> Dict[str, Any]:
+    def sync_laws_on_startup(self, data_path: Any = DATA_PATH) -> dict[str, Any]:
         """
         Check MongoDB laws and articles collections on startup.
         """
-        path_obj = Path(data_path) if isinstance(data_path, (str, Path)) else DATA_PATH
+        path_obj = Path(data_path) if isinstance(data_path, str | Path) else DATA_PATH
         if not path_obj.exists():
             return {"status": "file_not_found", "message": f"Data file not found at {path_obj}"}
 
         try:
-            with open(path_obj, "r", encoding="utf-8") as f:
+            with open(path_obj, encoding="utf-8") as f:
                 chunks = json.load(f)
         except Exception as e:
             return {"status": "error", "message": f"Cannot read data file: {e}"}
@@ -161,7 +164,7 @@ class LawRepository:
                 arts_col.create_index([("document_id", 1), ("article_number", 1)])
 
                 if laws_list:
-                    laws_col.insert_many([dict(l) for l in laws_list])
+                    laws_col.insert_many([dict(law) for law in laws_list])
                 if articles_list:
                     arts_col.insert_many([dict(a) for a in articles_list])
 
@@ -182,15 +185,15 @@ class LawRepository:
             logger.error(f"Error checking laws in MongoDB: {e}")
             return {"status": "error", "error": str(e)}
 
-    def ingest_laws(self, data_path: Any = DATA_PATH) -> Dict[str, Any]:
+    def ingest_laws(self, data_path: Any = DATA_PATH) -> dict[str, Any]:
         """
         Explicitly parse and ingest legal hierarchy and articles into MongoDB.
         """
-        path_obj = Path(data_path) if isinstance(data_path, (str, Path)) else DATA_PATH
+        path_obj = Path(data_path) if isinstance(data_path, str | Path) else DATA_PATH
         if not path_obj.exists():
             raise FileNotFoundError(f"Data file not found at {path_obj}")
 
-        with open(path_obj, "r", encoding="utf-8") as f:
+        with open(path_obj, encoding="utf-8") as f:
             chunks = json.load(f)
 
         laws_list, articles_list = self._structure_law_data(chunks)
@@ -206,7 +209,7 @@ class LawRepository:
             arts_col.create_index([("document_id", 1), ("article_number", 1)])
 
             if laws_list:
-                laws_col.insert_many([dict(l) for l in laws_list])
+                laws_col.insert_many([dict(law) for law in laws_list])
             if articles_list:
                 arts_col.insert_many([dict(a) for a in articles_list])
 
@@ -217,9 +220,9 @@ class LawRepository:
             "message": f"Ingested {len(laws_list)} laws and {len(articles_list)} articles into MongoDB.",
         }
 
-    def get_all_laws(self) -> Dict[str, Any]:
+    def get_all_laws(self) -> dict[str, Any]:
         laws_col = self.conn.get_laws_collection()
-        results: List[Dict[str, Any]] = []
+        results: list[dict[str, Any]] = []
 
         if laws_col is not None:
             try:
@@ -230,13 +233,13 @@ class LawRepository:
             except Exception as e:
                 logger.error(f"Error fetching laws list: {e}")
 
-        for l in self.conn._fallback_laws.values():
-            clean = dict(l)
+        for law in self.conn._fallback_laws.values():
+            clean = dict(law)
             clean.pop("hierarchy", None)
             results.append(clean)
         return {"laws": results, "total": len(results)}
 
-    def get_law_detail(self, document_id: str) -> Optional[Dict[str, Any]]:
+    def get_law_detail(self, document_id: str) -> dict[str, Any] | None:
         if not document_id:
             return None
         clean_id = document_id.strip()
@@ -262,20 +265,25 @@ class LawRepository:
         document_id: str,
         skip: int = 0,
         limit: int = 50,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         if not document_id:
             return {"articles": [], "total": 0}
         clean_id = document_id.strip()
 
         arts_col = self.conn.get_articles_collection()
-        results: List[Dict[str, Any]] = []
+        results: list[dict[str, Any]] = []
         total = 0
 
         if arts_col is not None:
             try:
                 query = {"$or": [{"document_id": clean_id}, {"doc_identity": clean_id}]}
                 total = arts_col.count_documents(query)
-                cursor = arts_col.find(query, {"_id": 0}).sort("article_number", 1).skip(skip).limit(limit)
+                cursor = (
+                    arts_col.find(query, {"_id": 0})
+                    .sort("article_number", 1)
+                    .skip(skip)
+                    .limit(limit)
+                )
                 for doc in cursor:
                     results.append(doc)
                 return {"articles": results, "total": total}
@@ -287,7 +295,7 @@ class LawRepository:
         paginated = all_arts[skip : skip + limit]
         return {"articles": [dict(a) for a in paginated], "total": total}
 
-    def get_law_article(self, document_id: str, article_number: int) -> Optional[Dict[str, Any]]:
+    def get_law_article(self, document_id: str, article_number: int) -> dict[str, Any] | None:
         if not document_id:
             return None
         clean_id = document_id.strip()
