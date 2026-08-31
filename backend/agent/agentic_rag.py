@@ -1,18 +1,12 @@
 import json
 import logging
-from datetime import datetime
-from typing import List, Dict, Any, Optional, Tuple
+from typing import Any
 
 from backend.agent.gemini_llm import gemini_client
+from backend.agent.prompts import SYNTHESIS_SYSTEM_INSTRUCTION, get_react_system_instruction
 from backend.agent.tools import (
     execute_tool,
-    search_legal_clauses,
-    get_law_document_detail,
-    get_law_article,
-    TOOLS_SCHEMA
 )
-
-from backend.agent.prompts import get_react_system_instruction, SYNTHESIS_SYSTEM_INSTRUCTION
 
 logger = logging.getLogger(__name__)
 
@@ -28,17 +22,15 @@ class LegalAgenticRAG:
     - Real-Time Event Streaming with dynamic steps
     - Grounded Legal Answer Synthesis
     """
+
     def __init__(self, llm=gemini_client, max_turns: int = 8):
         self.llm = llm
         self.max_turns = max_turns
 
     def _build_react_prompt(
-        self,
-        user_query: str,
-        target_date: Optional[str],
-        history_trace: List[Dict[str, Any]]
+        self, user_query: str, target_date: str | None, history_trace: list[dict[str, Any]]
     ) -> str:
-        prompt = f"CÂU HỎI NGƯỜI DÙNG: \"{user_query}\"\n"
+        prompt = f'CÂU HỎI NGƯỜI DÙNG: "{user_query}"\n'
         if target_date:
             prompt += f"MỐC THỜI GIAN TRA CỨU: {target_date}\n"
 
@@ -55,34 +47,39 @@ class LegalAgenticRAG:
 
         return prompt
 
-    def _extract_citations(self, chunks: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    def _extract_citations(self, chunks: list[dict[str, Any]]) -> list[dict[str, Any]]:
         citations = []
         seen_ids = set()
         for c in chunks:
-            cid = c.get("chunk_id") or f"{c.get('doc_identity')}_{c.get('article_number')}_{c.get('clause_number')}"
+            cid = (
+                c.get("chunk_id")
+                or f"{c.get('doc_identity')}_{c.get('article_number')}_{c.get('clause_number')}"
+            )
             if cid in seen_ids:
                 continue
             seen_ids.add(cid)
-            citations.append({
-                "chunk_id": c.get("chunk_id"),
-                "document_title": c.get("document_title"),
-                "doc_identity": c.get("doc_identity"),
-                "article_number": c.get("article_number"),
-                "article_title": c.get("article_title"),
-                "clause_number": c.get("clause_number"),
-                "point": c.get("point"),
-                "issue_date": c.get("issue_date"),
-                "effect_date": c.get("effect_date"),
-                "expire_date": c.get("expire_date"),
-                "effect_status_name": c.get("effect_status_name"),
-                "hierarchy_path": c.get("hierarchy_path", []),
-                "text": c.get("text", ""),
-                "score": c.get("score", 0.0),
-                "vbpl_url": c.get("vbpl_url")
-            })
+            citations.append(
+                {
+                    "chunk_id": c.get("chunk_id"),
+                    "document_title": c.get("document_title"),
+                    "doc_identity": c.get("doc_identity"),
+                    "article_number": c.get("article_number"),
+                    "article_title": c.get("article_title"),
+                    "clause_number": c.get("clause_number"),
+                    "point": c.get("point"),
+                    "issue_date": c.get("issue_date"),
+                    "effect_date": c.get("effect_date"),
+                    "expire_date": c.get("expire_date"),
+                    "effect_status_name": c.get("effect_status_name"),
+                    "hierarchy_path": c.get("hierarchy_path", []),
+                    "text": c.get("text", ""),
+                    "score": c.get("score", 0.0),
+                    "vbpl_url": c.get("vbpl_url"),
+                }
+            )
         return citations
 
-    def _format_context_blocks(self, retrieved_chunks: List[Dict[str, Any]]) -> List[str]:
+    def _format_context_blocks(self, retrieved_chunks: list[dict[str, Any]]) -> list[str]:
         context_blocks = []
         for idx, chunk in enumerate(retrieved_chunks, start=1):
             doc_title = chunk.get("document_title", "Văn bản quy phạm")
@@ -112,21 +109,25 @@ class LegalAgenticRAG:
     def generate_grounded_answer_with_usage(
         self,
         user_query: str,
-        retrieved_chunks: List[Dict[str, Any]],
-        target_date: Optional[str] = None
-    ) -> Tuple[str, Dict[str, int]]:
+        retrieved_chunks: list[dict[str, Any]],
+        target_date: str | None = None,
+    ) -> tuple[str, dict[str, int]]:
         if not retrieved_chunks:
             time_suffix = f" tại mốc thời gian {target_date}" if target_date else ""
             return (
                 "⚠️ **Không tìm thấy căn cứ pháp lý phù hợp trong cơ sở dữ liệu** "
-                f"cho câu hỏi *\"{user_query}\"*{time_suffix}.\n\n"
+                f'cho câu hỏi *"{user_query}"*{time_suffix}.\n\n'
                 "Vui lòng kiểm tra lại mốc thời gian hoặc mở rộng phạm vi câu hỏi."
             ), {"prompt_tokens": 0, "system_tokens": 0, "answer_tokens": 0, "total_tokens": 0}
 
         context_blocks = self._format_context_blocks(retrieved_chunks)
         context_str = "\n".join(context_blocks)
         system_instruction = self._get_synthesis_system_instruction()
-        target_date_info = f"Mốc thời gian tra cứu: {target_date}" if target_date else "Mốc thời gian tra cứu: Thời điểm hiện tại"
+        target_date_info = (
+            f"Mốc thời gian tra cứu: {target_date}"
+            if target_date
+            else "Mốc thời gian tra cứu: Thời điểm hiện tại"
+        )
 
         prompt = f"""
 CÂU HỎI NGƯỜI DÙNG:
@@ -141,38 +142,54 @@ YÊU CẦU:
 Hãy trả lời câu hỏi của người dùng theo đúng các quy tắc nội dung và định dạng Markdown chuẩn (sử dụng heading `###`, danh sách bullet points `- `, và bảng table `|...|` nếu cần thiết để so sánh/tổng hợp dữ liệu).
 """.strip()
 
-        return self.llm.generate_with_usage(prompt=prompt, system_instruction=system_instruction, temperature=0.2)
+        return self.llm.generate_with_usage(
+            prompt=prompt, system_instruction=system_instruction, temperature=0.2
+        )
 
     def generate_grounded_answer(
         self,
         user_query: str,
-        retrieved_chunks: List[Dict[str, Any]],
-        target_date: Optional[str] = None
+        retrieved_chunks: list[dict[str, Any]],
+        target_date: str | None = None,
     ) -> str:
-        text, _ = self.generate_grounded_answer_with_usage(user_query, retrieved_chunks, target_date)
+        text, _ = self.generate_grounded_answer_with_usage(
+            user_query, retrieved_chunks, target_date
+        )
         return text
 
     def generate_grounded_answer_stream_with_usage(
         self,
         user_query: str,
-        retrieved_chunks: List[Dict[str, Any]],
-        target_date: Optional[str] = None
+        retrieved_chunks: list[dict[str, Any]],
+        target_date: str | None = None,
     ):
         if not retrieved_chunks:
             time_suffix = f" tại mốc thời gian {target_date}" if target_date else ""
             fallback = (
                 "⚠️ **Không tìm thấy căn cứ pháp lý phù hợp trong cơ sở dữ liệu** "
-                f"cho câu hỏi *\"{user_query}\"*{time_suffix}.\n\n"
+                f'cho câu hỏi *"{user_query}"*{time_suffix}.\n\n'
                 "Vui lòng kiểm tra lại mốc thời gian hoặc mở rộng phạm vi câu hỏi."
             )
             yield {"type": "token", "content": fallback}
-            yield {"type": "usage", "usage": {"prompt_tokens": 0, "system_tokens": 0, "answer_tokens": 0, "total_tokens": 0}}
+            yield {
+                "type": "usage",
+                "usage": {
+                    "prompt_tokens": 0,
+                    "system_tokens": 0,
+                    "answer_tokens": 0,
+                    "total_tokens": 0,
+                },
+            }
             return
 
         context_blocks = self._format_context_blocks(retrieved_chunks)
         context_str = "\n".join(context_blocks)
         system_instruction = self._get_synthesis_system_instruction()
-        target_date_info = f"Mốc thời gian tra cứu: {target_date}" if target_date else "Mốc thời gian tra cứu: Thời điểm hiện tại"
+        target_date_info = (
+            f"Mốc thời gian tra cứu: {target_date}"
+            if target_date
+            else "Mốc thời gian tra cứu: Thời điểm hiện tại"
+        )
 
         prompt = f"""
 CÂU HỎI NGƯỜI DÙNG:
@@ -187,7 +204,9 @@ YÊU CẦU:
 Hãy trả lời câu hỏi của người dùng theo đúng các quy tắc nội dung và định dạng Markdown chuẩn (sử dụng heading `###`, danh sách bullet points `- `, và bảng table `|...|` nếu cần thiết để so sánh/tổng hợp dữ liệu).
 """.strip()
 
-        for event in self.llm.generate_stream_with_usage(prompt=prompt, system_instruction=system_instruction, temperature=0.2):
+        for event in self.llm.generate_stream_with_usage(
+            prompt=prompt, system_instruction=system_instruction, temperature=0.2
+        ):
             if event.get("type") == "text":
                 yield {"type": "token", "content": event.get("content", "")}
             elif event.get("type") == "usage":
@@ -196,19 +215,16 @@ Hãy trả lời câu hỏi của người dùng theo đúng các quy tắc nộ
     def generate_grounded_answer_stream(
         self,
         user_query: str,
-        retrieved_chunks: List[Dict[str, Any]],
-        target_date: Optional[str] = None
+        retrieved_chunks: list[dict[str, Any]],
+        target_date: str | None = None,
     ):
-        for event in self.generate_grounded_answer_stream_with_usage(user_query, retrieved_chunks, target_date):
+        for event in self.generate_grounded_answer_stream_with_usage(
+            user_query, retrieved_chunks, target_date
+        ):
             if event.get("type") == "token":
                 yield event.get("content", "")
 
-    def run(
-        self,
-        query: str,
-        target_date: Optional[str] = None,
-        top_k: int = 5
-    ) -> Dict[str, Any]:
+    def run(self, query: str, target_date: str | None = None, top_k: int = 5) -> dict[str, Any]:
         """
         Autonomous ReAct Agent execution (Synchronous Batch).
         """
@@ -230,15 +246,22 @@ Hãy trả lời câu hỏi của người dùng theo đúng các quy tắc nộ
             step_id = f"agent_turn_{turn}"
 
             try:
-                decision, turn_usage = self.llm.generate_json_with_usage(prompt=prompt, system_instruction=REACT_SYSTEM_INSTRUCTION)
+                decision, turn_usage = self.llm.generate_json_with_usage(
+                    prompt=prompt, system_instruction=REACT_SYSTEM_INSTRUCTION
+                )
             except Exception as e:
                 logger.warning(f"Error during ReAct LLM call: {e}")
                 decision = {
                     "thought": "Tra cứu trực tiếp cơ sở dữ liệu pháp luật.",
                     "action": "search_legal_clauses",
-                    "action_input": {"query": query, "target_date": target_date, "top_k": top_k}
+                    "action_input": {"query": query, "target_date": target_date, "top_k": top_k},
                 }
-                turn_usage = {"prompt_tokens": 0, "system_tokens": 0, "answer_tokens": 0, "total_tokens": 0}
+                turn_usage = {
+                    "prompt_tokens": 0,
+                    "system_tokens": 0,
+                    "answer_tokens": 0,
+                    "total_tokens": 0,
+                }
 
             thinking_prompt += turn_usage.get("prompt_tokens", 0)
             thinking_system += turn_usage.get("system_tokens", 0)
@@ -253,70 +276,83 @@ Hãy trả lời câu hỏi của người dùng theo đúng các quy tắc nộ
             if action == "final_answer":
                 if not accumulated_chunks and action_input and action_input.get("direct_response"):
                     final_direct_answer = action_input.get("direct_response")
-                    steps.append({
-                        "step": step_id,
-                        "step_type": "direct_answer",
-                        "title": "Phân tích & Phản hồi trực tiếp",
-                        "status": "completed",
-                        "message": thought or "Trả lời trực tiếp yêu cầu của người dùng",
-                        "details": {"thought": thought, "reasoning": thought}
-                    })
-                    token_breakdown.append({
-                        "step": step_id,
-                        "phase": "thinking",
-                        "title": "Phân tích & Phản hồi trực tiếp",
-                        "prompt_tokens": turn_usage.get("prompt_tokens", 0),
-                        "system_tokens": turn_usage.get("system_tokens", 0),
-                        "answer_tokens": turn_usage.get("answer_tokens", 0),
-                        "total_tokens": turn_usage.get("total_tokens", 0)
-                    })
+                    steps.append(
+                        {
+                            "step": step_id,
+                            "step_type": "direct_answer",
+                            "title": "Phân tích & Phản hồi trực tiếp",
+                            "status": "completed",
+                            "message": thought or "Trả lời trực tiếp yêu cầu của người dùng",
+                            "details": {"thought": thought, "reasoning": thought},
+                        }
+                    )
+                    token_breakdown.append(
+                        {
+                            "step": step_id,
+                            "phase": "thinking",
+                            "title": "Phân tích & Phản hồi trực tiếp",
+                            "prompt_tokens": turn_usage.get("prompt_tokens", 0),
+                            "system_tokens": turn_usage.get("system_tokens", 0),
+                            "answer_tokens": turn_usage.get("answer_tokens", 0),
+                            "total_tokens": turn_usage.get("total_tokens", 0),
+                        }
+                    )
                 else:
-                    final_synthesis_thought = thought or "Đã thu thập đầy đủ căn cứ pháp lý cần thiết. Bắt đầu tổng hợp câu trả lời chi tiết và kiểm chứng tính hiệu lực."
-                    token_breakdown.append({
-                        "step": step_id,
-                        "phase": "thinking",
-                        "title": "Tổng hợp kết quả & Quyết định",
-                        "prompt_tokens": turn_usage.get("prompt_tokens", 0),
-                        "system_tokens": turn_usage.get("system_tokens", 0),
-                        "answer_tokens": turn_usage.get("answer_tokens", 0),
-                        "total_tokens": turn_usage.get("total_tokens", 0)
-                    })
+                    final_synthesis_thought = (
+                        thought
+                        or "Đã thu thập đầy đủ căn cứ pháp lý cần thiết. Bắt đầu tổng hợp câu trả lời chi tiết và kiểm chứng tính hiệu lực."
+                    )
+                    token_breakdown.append(
+                        {
+                            "step": step_id,
+                            "phase": "thinking",
+                            "title": "Tổng hợp kết quả & Quyết định",
+                            "prompt_tokens": turn_usage.get("prompt_tokens", 0),
+                            "system_tokens": turn_usage.get("system_tokens", 0),
+                            "answer_tokens": turn_usage.get("answer_tokens", 0),
+                            "total_tokens": turn_usage.get("total_tokens", 0),
+                        }
+                    )
                 break
 
             # Execute Tool Action
             tool_title = f"Gọi công cụ: {action}"
             if action == "search_legal_clauses":
-                tool_title = f"Tìm kiếm điều khoản: \"{action_input.get('query', query)}\""
+                tool_title = f'Tìm kiếm điều khoản: "{action_input.get("query", query)}"'
             elif action == "get_law_document_detail":
                 tool_title = f"Tra cứu văn bản: {action_input.get('document_id', '')}"
             elif action == "get_law_article":
                 tool_title = f"Tra cứu Điều {action_input.get('article_number', '')} ({action_input.get('document_id', '')})"
 
-            token_breakdown.append({
-                "step": step_id,
-                "phase": "thinking",
-                "title": tool_title,
-                "prompt_tokens": turn_usage.get("prompt_tokens", 0),
-                "system_tokens": turn_usage.get("system_tokens", 0),
-                "answer_tokens": turn_usage.get("answer_tokens", 0),
-                "total_tokens": turn_usage.get("total_tokens", 0)
-            })
-
-            steps.append({
-                "step": step_id,
-                "step_type": "tool_call",
-                "tool": action,
-                "tool_args": action_input,
-                "title": tool_title,
-                "status": "running",
-                "message": thought or f"Đang thực thi {action}...",
-                "details": {
-                    "thought": thought,
-                    "reasoning": thought,
-                    "tool": action,
-                    "tool_args": action_input
+            token_breakdown.append(
+                {
+                    "step": step_id,
+                    "phase": "thinking",
+                    "title": tool_title,
+                    "prompt_tokens": turn_usage.get("prompt_tokens", 0),
+                    "system_tokens": turn_usage.get("system_tokens", 0),
+                    "answer_tokens": turn_usage.get("answer_tokens", 0),
+                    "total_tokens": turn_usage.get("total_tokens", 0),
                 }
-            })
+            )
+
+            steps.append(
+                {
+                    "step": step_id,
+                    "step_type": "tool_call",
+                    "tool": action,
+                    "tool_args": action_input,
+                    "title": tool_title,
+                    "status": "running",
+                    "message": thought or f"Đang thực thi {action}...",
+                    "details": {
+                        "thought": thought,
+                        "reasoning": thought,
+                        "tool": action,
+                        "tool_args": action_input,
+                    },
+                }
+            )
 
             # Execute tool
             tool_res = execute_tool(action, action_input)
@@ -357,45 +393,54 @@ Hãy trả lời câu hỏi của người dùng theo đúng các quy tắc nộ
                 observation = f"Kết quả từ {action}: {str(tool_res)[:200]}"
                 steps[-1]["status"] = "completed"
 
-            history_trace.append({
-                "thought": thought,
-                "action": action,
-                "action_input": action_input,
-                "observation": observation
-            })
+            history_trace.append(
+                {
+                    "thought": thought,
+                    "action": action,
+                    "action_input": action_input,
+                    "observation": observation,
+                }
+            )
 
         # Answer Synthesis
-        synthesis_tokens = {"prompt_tokens": 0, "system_tokens": 0, "answer_tokens": 0, "total_tokens": 0}
+        synthesis_tokens = {
+            "prompt_tokens": 0,
+            "system_tokens": 0,
+            "answer_tokens": 0,
+            "total_tokens": 0,
+        }
         if final_direct_answer and not accumulated_chunks:
             answer = final_direct_answer
         else:
-            synthesis_thought = final_synthesis_thought or f"Đã hoàn tất các bước tra cứu ({len(accumulated_chunks)} căn cứ pháp lý thu thập được). Bắt đầu kiểm chứng và tổng hợp câu trả lời."
-            steps.append({
-                "step": "answer_synthesis",
-                "step_type": "synthesis",
-                "title": "Kiểm chứng & Tổng hợp câu trả lời",
-                "status": "running",
-                "message": synthesis_thought,
-                "details": {
-                    "thought": synthesis_thought,
-                    "reasoning": synthesis_thought
+            synthesis_thought = (
+                final_synthesis_thought
+                or f"Đã hoàn tất các bước tra cứu ({len(accumulated_chunks)} căn cứ pháp lý thu thập được). Bắt đầu kiểm chứng và tổng hợp câu trả lời."
+            )
+            steps.append(
+                {
+                    "step": "answer_synthesis",
+                    "step_type": "synthesis",
+                    "title": "Kiểm chứng & Tổng hợp câu trả lời",
+                    "status": "running",
+                    "message": synthesis_thought,
+                    "details": {"thought": synthesis_thought, "reasoning": synthesis_thought},
                 }
-            })
+            )
             answer, synthesis_tokens = self.generate_grounded_answer_with_usage(
-                user_query=query,
-                retrieved_chunks=accumulated_chunks,
-                target_date=target_date
+                user_query=query, retrieved_chunks=accumulated_chunks, target_date=target_date
             )
             steps[-1]["status"] = "completed"
-            token_breakdown.append({
-                "step": "answer_synthesis",
-                "phase": "synthesis",
-                "title": "Kiểm chứng & Tổng hợp câu trả lời",
-                "prompt_tokens": synthesis_tokens.get("prompt_tokens", 0),
-                "system_tokens": synthesis_tokens.get("system_tokens", 0),
-                "answer_tokens": synthesis_tokens.get("answer_tokens", 0),
-                "total_tokens": synthesis_tokens.get("total_tokens", 0)
-            })
+            token_breakdown.append(
+                {
+                    "step": "answer_synthesis",
+                    "phase": "synthesis",
+                    "title": "Kiểm chứng & Tổng hợp câu trả lời",
+                    "prompt_tokens": synthesis_tokens.get("prompt_tokens", 0),
+                    "system_tokens": synthesis_tokens.get("system_tokens", 0),
+                    "answer_tokens": synthesis_tokens.get("answer_tokens", 0),
+                    "total_tokens": synthesis_tokens.get("total_tokens", 0),
+                }
+            )
 
         citations = self._extract_citations(accumulated_chunks)
 
@@ -413,32 +458,31 @@ Hãy trả lời câu hỏi của người dùng theo đúng các quy tắc nộ
                 "prompt_tokens": thinking_prompt,
                 "system_tokens": thinking_system,
                 "answer_tokens": thinking_answer,
-                "total_tokens": thinking_total
+                "total_tokens": thinking_total,
             },
             "synthesis_tokens": synthesis_tokens,
-            "breakdown": token_breakdown
+            "breakdown": token_breakdown,
         }
 
         return {
             "query": query,
             "answer": answer,
             "analysis": {
-                "search_query": history_trace[0]["action_input"].get("query") if history_trace and history_trace[0].get("action") == "search_legal_clauses" else query,
+                "search_query": history_trace[0]["action_input"].get("query")
+                if history_trace and history_trace[0].get("action") == "search_legal_clauses"
+                else query,
                 "target_date": target_date,
-                "reasoning": history_trace[0].get("thought") if history_trace else "Xử lý trực tiếp",
-                "intent": "search" if accumulated_chunks else "general"
+                "reasoning": history_trace[0].get("thought")
+                if history_trace
+                else "Xử lý trực tiếp",
+                "intent": "search" if accumulated_chunks else "general",
             },
             "citations": citations,
             "steps": steps,
-            "token_usage": token_usage
+            "token_usage": token_usage,
         }
 
-    def run_stream(
-        self,
-        query: str,
-        target_date: Optional[str] = None,
-        top_k: int = 5
-    ):
+    def run_stream(self, query: str, target_date: str | None = None, top_k: int = 5):
         """
         Autonomous ReAct Agent execution with Real-Time SSE Streaming.
         Yields dynamic step events for every tool action and reflection.
@@ -461,15 +505,22 @@ Hãy trả lời câu hỏi của người dùng theo đúng các quy tắc nộ
             step_id = f"agent_turn_{turn}"
 
             try:
-                decision, turn_usage = self.llm.generate_json_with_usage(prompt=prompt, system_instruction=REACT_SYSTEM_INSTRUCTION)
+                decision, turn_usage = self.llm.generate_json_with_usage(
+                    prompt=prompt, system_instruction=REACT_SYSTEM_INSTRUCTION
+                )
             except Exception as e:
                 logger.warning(f"Error during ReAct LLM call: {e}")
                 decision = {
                     "thought": "Tra cứu trực tiếp cơ sở dữ liệu pháp luật.",
                     "action": "search_legal_clauses",
-                    "action_input": {"query": query, "target_date": target_date, "top_k": top_k}
+                    "action_input": {"query": query, "target_date": target_date, "top_k": top_k},
                 }
-                turn_usage = {"prompt_tokens": 0, "system_tokens": 0, "answer_tokens": 0, "total_tokens": 0}
+                turn_usage = {
+                    "prompt_tokens": 0,
+                    "system_tokens": 0,
+                    "answer_tokens": 0,
+                    "total_tokens": 0,
+                }
 
             thinking_prompt += turn_usage.get("prompt_tokens", 0)
             thinking_system += turn_usage.get("system_tokens", 0)
@@ -490,51 +541,65 @@ Hãy trả lời câu hỏi của người dùng theo đúng các quy tắc nộ
                         "title": "Phân tích & Phản hồi trực tiếp",
                         "status": "completed",
                         "message": thought or "Trả lời trực tiếp yêu cầu của người dùng",
-                        "details": {"thought": thought, "reasoning": thought}
+                        "details": {"thought": thought, "reasoning": thought},
                     }
                     steps.append(step_data)
-                    token_breakdown.append({
-                        "step": step_id,
-                        "phase": "thinking",
-                        "title": "Phân tích & Phản hồi trực tiếp",
-                        "prompt_tokens": turn_usage.get("prompt_tokens", 0),
-                        "system_tokens": turn_usage.get("system_tokens", 0),
-                        "answer_tokens": turn_usage.get("answer_tokens", 0),
-                        "total_tokens": turn_usage.get("total_tokens", 0)
-                    })
+                    token_breakdown.append(
+                        {
+                            "step": step_id,
+                            "phase": "thinking",
+                            "title": "Phân tích & Phản hồi trực tiếp",
+                            "prompt_tokens": turn_usage.get("prompt_tokens", 0),
+                            "system_tokens": turn_usage.get("system_tokens", 0),
+                            "answer_tokens": turn_usage.get("answer_tokens", 0),
+                            "total_tokens": turn_usage.get("total_tokens", 0),
+                        }
+                    )
                     yield {"type": "step_start", "step": step_id, "message": step_data["message"]}
-                    yield {"type": "step_complete", "step": step_id, "message": step_data["message"], "details": step_data["details"]}
-                else:
-                    final_synthesis_thought = thought or "Đã thu thập đầy đủ căn cứ pháp lý cần thiết. Bắt đầu tổng hợp câu trả lời chi tiết và kiểm chứng tính hiệu lực."
-                    token_breakdown.append({
+                    yield {
+                        "type": "step_complete",
                         "step": step_id,
-                        "phase": "thinking",
-                        "title": "Tổng hợp kết quả & Quyết định",
-                        "prompt_tokens": turn_usage.get("prompt_tokens", 0),
-                        "system_tokens": turn_usage.get("system_tokens", 0),
-                        "answer_tokens": turn_usage.get("answer_tokens", 0),
-                        "total_tokens": turn_usage.get("total_tokens", 0)
-                    })
+                        "message": step_data["message"],
+                        "details": step_data["details"],
+                    }
+                else:
+                    final_synthesis_thought = (
+                        thought
+                        or "Đã thu thập đầy đủ căn cứ pháp lý cần thiết. Bắt đầu tổng hợp câu trả lời chi tiết và kiểm chứng tính hiệu lực."
+                    )
+                    token_breakdown.append(
+                        {
+                            "step": step_id,
+                            "phase": "thinking",
+                            "title": "Tổng hợp kết quả & Quyết định",
+                            "prompt_tokens": turn_usage.get("prompt_tokens", 0),
+                            "system_tokens": turn_usage.get("system_tokens", 0),
+                            "answer_tokens": turn_usage.get("answer_tokens", 0),
+                            "total_tokens": turn_usage.get("total_tokens", 0),
+                        }
+                    )
                 break
 
             # Execute Tool Action
             tool_title = f"Gọi công cụ: {action}"
             if action == "search_legal_clauses":
-                tool_title = f"Tìm kiếm điều khoản: \"{action_input.get('query', query)}\""
+                tool_title = f'Tìm kiếm điều khoản: "{action_input.get("query", query)}"'
             elif action == "get_law_document_detail":
                 tool_title = f"Tra cứu văn bản: {action_input.get('document_id', '')}"
             elif action == "get_law_article":
                 tool_title = f"Tra cứu Điều {action_input.get('article_number', '')} ({action_input.get('document_id', '')})"
 
-            token_breakdown.append({
-                "step": step_id,
-                "phase": "thinking",
-                "title": tool_title,
-                "prompt_tokens": turn_usage.get("prompt_tokens", 0),
-                "system_tokens": turn_usage.get("system_tokens", 0),
-                "answer_tokens": turn_usage.get("answer_tokens", 0),
-                "total_tokens": turn_usage.get("total_tokens", 0)
-            })
+            token_breakdown.append(
+                {
+                    "step": step_id,
+                    "phase": "thinking",
+                    "title": tool_title,
+                    "prompt_tokens": turn_usage.get("prompt_tokens", 0),
+                    "system_tokens": turn_usage.get("system_tokens", 0),
+                    "answer_tokens": turn_usage.get("answer_tokens", 0),
+                    "total_tokens": turn_usage.get("total_tokens", 0),
+                }
+            )
 
             step_data = {
                 "step": step_id,
@@ -548,8 +613,8 @@ Hãy trả lời câu hỏi của người dùng theo đúng các quy tắc nộ
                     "thought": thought,
                     "reasoning": thought,
                     "tool": action,
-                    "tool_args": action_input
-                }
+                    "tool_args": action_input,
+                },
             }
             steps.append(step_data)
             yield {"type": "step_start", "step": step_id, "message": step_data["message"]}
@@ -590,12 +655,14 @@ Hãy trả lời câu hỏi của người dùng theo đúng các quy tắc nộ
                 observation = f"Kết quả từ {action}: {str(tool_res)[:200]}"
                 steps[-1]["status"] = "completed"
 
-            history_trace.append({
-                "thought": thought,
-                "action": action,
-                "action_input": action_input,
-                "observation": observation
-            })
+            history_trace.append(
+                {
+                    "thought": thought,
+                    "action": action,
+                    "action_input": action_input,
+                    "observation": observation,
+                }
+            )
 
             current_citations = self._extract_citations(accumulated_chunks)
             yield {
@@ -603,28 +670,33 @@ Hãy trả lời câu hỏi của người dùng theo đúng các quy tắc nộ
                 "step": step_id,
                 "message": observation or f"Hoàn tất {action}",
                 "details": steps[-1]["details"],
-                "citations": current_citations
+                "citations": current_citations,
             }
 
         # Step: Answer Synthesis
         synth_step_id = "answer_synthesis"
-        synthesis_thought = final_synthesis_thought or f"Đã hoàn tất các bước tra cứu ({len(accumulated_chunks)} căn cứ pháp lý thu thập được). Bắt đầu kiểm chứng và tổng hợp câu trả lời."
+        synthesis_thought = (
+            final_synthesis_thought
+            or f"Đã hoàn tất các bước tra cứu ({len(accumulated_chunks)} căn cứ pháp lý thu thập được). Bắt đầu kiểm chứng và tổng hợp câu trả lời."
+        )
         step_data = {
             "step": synth_step_id,
             "step_type": "synthesis",
             "title": "Kiểm chứng & Tổng hợp câu trả lời",
             "status": "running",
             "message": synthesis_thought,
-            "details": {
-                "thought": synthesis_thought,
-                "reasoning": synthesis_thought
-            }
+            "details": {"thought": synthesis_thought, "reasoning": synthesis_thought},
         }
         steps.append(step_data)
         yield {"type": "step_start", "step": synth_step_id, "message": step_data["message"]}
 
         full_answer = ""
-        synthesis_tokens = {"prompt_tokens": 0, "system_tokens": 0, "answer_tokens": 0, "total_tokens": 0}
+        synthesis_tokens = {
+            "prompt_tokens": 0,
+            "system_tokens": 0,
+            "answer_tokens": 0,
+            "total_tokens": 0,
+        }
 
         if final_direct_answer and not accumulated_chunks:
             full_answer = final_direct_answer
@@ -632,39 +704,41 @@ Hãy trả lời câu hỏi của người dùng theo đúng các quy tắc nộ
                 yield {"type": "token", "content": char}
         else:
             for event in self.generate_grounded_answer_stream_with_usage(
-                user_query=query,
-                retrieved_chunks=accumulated_chunks,
-                target_date=target_date
+                user_query=query, retrieved_chunks=accumulated_chunks, target_date=target_date
             ):
                 if event.get("type") == "token":
                     full_answer += event.get("content", "")
                     yield {"type": "token", "content": event.get("content", "")}
                 elif event.get("type") == "usage":
                     synthesis_tokens = event.get("usage", {})
-                    token_breakdown.append({
-                        "step": synth_step_id,
-                        "phase": "synthesis",
-                        "title": "Kiểm chứng & Tổng hợp câu trả lời",
-                        "prompt_tokens": synthesis_tokens.get("prompt_tokens", 0),
-                        "system_tokens": synthesis_tokens.get("system_tokens", 0),
-                        "answer_tokens": synthesis_tokens.get("answer_tokens", 0),
-                        "total_tokens": synthesis_tokens.get("total_tokens", 0)
-                    })
+                    token_breakdown.append(
+                        {
+                            "step": synth_step_id,
+                            "phase": "synthesis",
+                            "title": "Kiểm chứng & Tổng hợp câu trả lời",
+                            "prompt_tokens": synthesis_tokens.get("prompt_tokens", 0),
+                            "system_tokens": synthesis_tokens.get("system_tokens", 0),
+                            "answer_tokens": synthesis_tokens.get("answer_tokens", 0),
+                            "total_tokens": synthesis_tokens.get("total_tokens", 0),
+                        }
+                    )
 
         steps[-1]["status"] = "completed"
         yield {
             "type": "step_complete",
             "step": synth_step_id,
             "message": "Hoàn tất tổng hợp câu trả lời",
-            "details": step_data["details"]
+            "details": step_data["details"],
         }
 
         final_citations = self._extract_citations(accumulated_chunks)
         final_analysis = {
-            "search_query": history_trace[0]["action_input"].get("query") if history_trace and history_trace[0].get("action") == "search_legal_clauses" else query,
+            "search_query": history_trace[0]["action_input"].get("query")
+            if history_trace and history_trace[0].get("action") == "search_legal_clauses"
+            else query,
             "target_date": target_date,
             "reasoning": history_trace[0].get("thought") if history_trace else "Xử lý trực tiếp",
-            "intent": "search" if accumulated_chunks else "general"
+            "intent": "search" if accumulated_chunks else "general",
         }
 
         total_prompt = thinking_prompt + synthesis_tokens.get("prompt_tokens", 0)
@@ -681,10 +755,10 @@ Hãy trả lời câu hỏi của người dùng theo đúng các quy tắc nộ
                 "prompt_tokens": thinking_prompt,
                 "system_tokens": thinking_system,
                 "answer_tokens": thinking_answer,
-                "total_tokens": thinking_total
+                "total_tokens": thinking_total,
             },
             "synthesis_tokens": synthesis_tokens,
-            "breakdown": token_breakdown
+            "breakdown": token_breakdown,
         }
 
         yield {
@@ -694,8 +768,9 @@ Hãy trả lời câu hỏi của người dùng theo đúng các quy tắc nộ
             "analysis": final_analysis,
             "citations": final_citations,
             "steps": steps,
-            "token_usage": token_usage
+            "token_usage": token_usage,
         }
+
 
 # Singleton instance
 legal_agentic_rag = LegalAgenticRAG()

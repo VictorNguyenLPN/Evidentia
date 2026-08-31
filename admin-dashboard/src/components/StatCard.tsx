@@ -33,7 +33,7 @@ export const StatCard: React.FC<StatCardProps> = ({
       <div className="flex items-center justify-between">
         <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">{title}</span>
       </div>
-      
+
       <div className="mt-2 flex items-baseline justify-between">
         <div className="text-2xl font-bold text-slate-900 tracking-tight">
           {typeof value === 'number' ? value.toLocaleString() : value}

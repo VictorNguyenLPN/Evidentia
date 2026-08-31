@@ -1,20 +1,21 @@
 import logging
-from typing import Dict, Any, Optional
-from fastapi import APIRouter, HTTPException, status, Depends, Request
+from typing import Any
 
-from backend.db.mongo_manager import mongo_manager
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+
 from backend.auth import (
-    hash_password,
-    verify_password,
     create_access_token,
     get_current_user,
     get_optional_current_user,
+    hash_password,
+    verify_password,
 )
+from backend.db.mongo_manager import mongo_manager
 from backend.schemas.auth import (
-    RegisterRequest,
-    LoginRequest,
-    UpdateProfileRequest,
     ChangePasswordRequest,
+    LoginRequest,
+    RegisterRequest,
+    UpdateProfileRequest,
     sanitize_user,
 )
 
@@ -22,8 +23,9 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/auth", tags=["Authentication"])
 
+
 @router.post("/register")
-async def register(payload: RegisterRequest) -> Dict[str, Any]:
+async def register(payload: RegisterRequest) -> dict[str, Any]:
     clean_email = payload.email.strip().lower()
 
     existing = mongo_manager.get_user_by_email(clean_email)
@@ -42,11 +44,13 @@ async def register(payload: RegisterRequest) -> Dict[str, Any]:
         plan="free",
     )
 
-    token = create_access_token(data={
-        "sub": user_doc["id"],
-        "email": user_doc["email"],
-        "role": user_doc["role"],
-    })
+    token = create_access_token(
+        data={
+            "sub": user_doc["id"],
+            "email": user_doc["email"],
+            "role": user_doc["role"],
+        }
+    )
 
     return {
         "token": token,
@@ -54,8 +58,9 @@ async def register(payload: RegisterRequest) -> Dict[str, Any]:
         "message": "Đăng ký tài khoản thành công.",
     }
 
+
 @router.post("/login")
-async def login(credentials: LoginRequest) -> Dict[str, Any]:
+async def login(credentials: LoginRequest) -> dict[str, Any]:
     clean_email = credentials.email.strip().lower()
     user = mongo_manager.get_user_by_email(clean_email)
     if not user or not verify_password(credentials.password, user.get("password_hash", "")):
@@ -64,11 +69,13 @@ async def login(credentials: LoginRequest) -> Dict[str, Any]:
             detail="Email hoặc mật khẩu không chính xác.",
         )
 
-    token = create_access_token(data={
-        "sub": user["id"],
-        "email": user["email"],
-        "role": user.get("role", "user"),
-    })
+    token = create_access_token(
+        data={
+            "sub": user["id"],
+            "email": user["email"],
+            "role": user.get("role", "user"),
+        }
+    )
 
     return {
         "token": token,
@@ -76,17 +83,19 @@ async def login(credentials: LoginRequest) -> Dict[str, Any]:
         "message": "Đăng nhập thành công.",
     }
 
+
 @router.get("/me")
-async def get_my_profile(current_user: Dict[str, Any] = Depends(get_current_user)) -> Dict[str, Any]:
-    return {
-        "user": sanitize_user(current_user)
-    }
+async def get_my_profile(
+    current_user: dict[str, Any] = Depends(get_current_user),
+) -> dict[str, Any]:
+    return {"user": sanitize_user(current_user)}
+
 
 @router.put("/profile")
 async def update_profile(
     payload: UpdateProfileRequest,
-    current_user: Dict[str, Any] = Depends(get_current_user),
-) -> Dict[str, Any]:
+    current_user: dict[str, Any] = Depends(get_current_user),
+) -> dict[str, Any]:
     updated = mongo_manager.update_user_profile(
         user_id=current_user["id"],
         full_name=payload.full_name,
@@ -102,11 +111,12 @@ async def update_profile(
         "message": "Cập nhật hồ sơ thành công.",
     }
 
+
 @router.post("/change-password")
 async def change_password(
     payload: ChangePasswordRequest,
-    current_user: Dict[str, Any] = Depends(get_current_user),
-) -> Dict[str, Any]:
+    current_user: dict[str, Any] = Depends(get_current_user),
+) -> dict[str, Any]:
     full_user = mongo_manager.get_user_by_id(current_user["id"])
     if not full_user:
         raise HTTPException(
@@ -130,11 +140,12 @@ async def change_password(
 
     return {"message": "Đổi mật khẩu thành công."}
 
+
 @router.get("/guest-status")
 async def get_guest_status(
     request: Request,
-    current_user: Optional[Dict[str, Any]] = Depends(get_optional_current_user),
-) -> Dict[str, Any]:
+    current_user: dict[str, Any] | None = Depends(get_optional_current_user),
+) -> dict[str, Any]:
     if current_user:
         safe_user = sanitize_user(current_user)
         return {

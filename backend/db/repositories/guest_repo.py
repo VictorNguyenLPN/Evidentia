@@ -1,9 +1,11 @@
 import logging
 from datetime import datetime
-from typing import List, Dict, Any
+from typing import Any
+
 from backend.db.connection import MongoConnectionManager
 
 logger = logging.getLogger(__name__)
+
 
 class GuestRepository:
     def __init__(self, conn: MongoConnectionManager):
@@ -65,12 +67,12 @@ class GuestRepository:
         count = self.get_guest_question_count(ip)
         return count >= max_limit
 
-    def get_all_guest_limits_admin(self) -> List[Dict[str, Any]]:
+    def get_all_guest_limits_admin(self) -> list[dict[str, Any]]:
         """
         List all IP guest quotas tracked in the system for admin audit.
         """
         col = self.conn.get_guest_limits_collection()
-        results: List[Dict[str, Any]] = []
+        results: list[dict[str, Any]] = []
 
         if col is not None:
             try:
@@ -87,13 +89,15 @@ class GuestRepository:
                 logger.error(f"Error fetching guest limits from MongoDB: {e}")
 
         for ip_addr, count in self.conn._fallback_guest_limits.items():
-            results.append({
-                "_id": f"fb_guest_{ip_addr}",
-                "ip": ip_addr,
-                "questions_used": count,
-                "created_at": datetime.now().isoformat(),
-                "updated_at": datetime.now().isoformat(),
-            })
+            results.append(
+                {
+                    "_id": f"fb_guest_{ip_addr}",
+                    "ip": ip_addr,
+                    "questions_used": count,
+                    "created_at": datetime.now().isoformat(),
+                    "updated_at": datetime.now().isoformat(),
+                }
+            )
         return results
 
     def reset_guest_limit_for_ip(self, ip: str) -> bool:

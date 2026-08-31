@@ -119,7 +119,7 @@ export const OverviewPage: React.FC = () => {
         {/* System Health */}
         <div className="lg:col-span-2 bg-white rounded-xl border border-slate-200/90 p-5 shadow-2xs">
           <div className="flex items-center justify-between pb-4 border-b border-slate-100">
-            <div className="flex items-center gap-2.5"> 
+            <div className="flex items-center gap-2.5">
               <div>
                 <h2 className="text-sm font-bold text-slate-900">Trạng thái hệ thống</h2>
                 <p className="text-[11px] text-slate-500">Giám sát tình trạng hạ tầng hệ thống</p>

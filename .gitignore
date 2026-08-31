@@ -19,3 +19,10 @@ node_modules/
 data.test.json
 
 dist/
+
+# Testing & Linting artifacts
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+*.pyc

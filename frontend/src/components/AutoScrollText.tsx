@@ -56,7 +56,7 @@ export const ScrollableText: React.FC<ScrollableTextProps> = ({
     };
   }, [text]);
 
-  const SCROLL_SPEED = 50; 
+  const SCROLL_SPEED = 50;
   const duration = overflowDistance > 0 ? Math.max(0.6, overflowDistance / SCROLL_SPEED) : 0;
 
   return (

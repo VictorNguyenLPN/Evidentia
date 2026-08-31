@@ -1,15 +1,16 @@
 import logging
-from typing import Dict, Any
+from typing import Any
 
 from backend.db.connection import MongoConnectionManager
 
 logger = logging.getLogger(__name__)
 
+
 class AdminRepository:
     def __init__(self, conn: MongoConnectionManager):
         self.conn = conn
 
-    def get_admin_overview_stats(self) -> Dict[str, Any]:
+    def get_admin_overview_stats(self) -> dict[str, Any]:
         """
         Aggregate high-level system analytics for the Admin dashboard.
         """
@@ -37,7 +38,12 @@ class AdminRepository:
                 pro_users = col_users.count_documents({"plan": "pro"})
                 free_users = col_users.count_documents({"plan": "free", "role": {"$ne": "admin"}})
                 pipeline_q = [
-                    {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$questions_used", 0]}}}}
+                    {
+                        "$group": {
+                            "_id": None,
+                            "total": {"$sum": {"$ifNull": ["$questions_used", 0]}},
+                        }
+                    }
                 ]
                 agg_q = list(col_users.aggregate(pipeline_q))
                 if agg_q:
@@ -49,8 +55,14 @@ class AdminRepository:
             total_users = len(unique_users)
             admin_users = sum(1 for u in unique_users.values() if u.get("role") == "admin")
             pro_users = sum(1 for u in unique_users.values() if u.get("plan") == "pro")
-            free_users = sum(1 for u in unique_users.values() if u.get("plan") == "free" and u.get("role") != "admin")
-            total_questions_asked = sum(int(u.get("questions_used", 0)) for u in unique_users.values())
+            free_users = sum(
+                1
+                for u in unique_users.values()
+                if u.get("plan") == "free" and u.get("role") != "admin"
+            )
+            total_questions_asked = sum(
+                int(u.get("questions_used", 0)) for u in unique_users.values()
+            )
 
         if col_chats is not None:
             try:
@@ -66,7 +78,9 @@ class AdminRepository:
                 logger.error(f"Error aggregating chat stats: {e}")
         else:
             total_chats = len(self.conn._fallback_chats)
-            total_messages = sum(len(c.get("messages", [])) for c in self.conn._fallback_chats.values())
+            total_messages = sum(
+                len(c.get("messages", [])) for c in self.conn._fallback_chats.values()
+            )
 
         if col_laws is not None:
             try:

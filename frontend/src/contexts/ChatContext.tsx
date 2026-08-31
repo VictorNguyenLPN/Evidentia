@@ -107,7 +107,9 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     useEffect(() => {
         let isMounted = true;
         if (!token || !user?.id) {
-            setChats([]);
+            Promise.resolve().then(() => {
+                if (isMounted) setChats([]);
+            });
             return;
         }
         chatService.getChats()

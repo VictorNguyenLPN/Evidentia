@@ -1,19 +1,21 @@
 import logging
-from typing import Dict, Any
+from typing import Any
+
 from fastapi import APIRouter
 
-from backend.config import GEMINI_MODEL, QDRANT_COLLECTION_NAME
-from backend.rag.qdrant_manager import qdrant_manager
 from backend.agent.gemini_llm import gemini_client
+from backend.config import GEMINI_MODEL, QDRANT_COLLECTION_NAME
 from backend.db.mongo_manager import mongo_manager
+from backend.rag.qdrant_manager import qdrant_manager
 from backend.schemas.status import SystemStatusResponse
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["Status"])
 
+
 @router.get("/")
-def read_root() -> Dict[str, Any]:
+def read_root() -> dict[str, Any]:
     return {
         "app": "Evidentia Legal Assistant Backend",
         "status": "online",
@@ -25,6 +27,7 @@ def read_root() -> Dict[str, Any]:
             "docs": "/docs",
         },
     }
+
 
 @router.get("/api/status", response_model=SystemStatusResponse)
 def get_system_status() -> SystemStatusResponse:

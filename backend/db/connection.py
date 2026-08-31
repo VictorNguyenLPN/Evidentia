@@ -1,31 +1,34 @@
 import logging
-from typing import Optional, Dict, Any, List
+from typing import Any
+
 import certifi
 from pymongo import MongoClient
 from pymongo.collection import Collection
 
-from backend.config import MONGODB_URL, MONGODB_DB_NAME
+from backend.config import MONGODB_DB_NAME, MONGODB_URL
 
 logger = logging.getLogger(__name__)
+
 
 class MongoConnectionManager:
     """
     Manages MongoDB MongoClient lifecycle and in-memory fallback stores.
     """
+
     def __init__(self, uri: str = MONGODB_URL, db_name: str = MONGODB_DB_NAME):
         self.uri = uri
         self.db_name = db_name
-        self._client: Optional[MongoClient] = None
-        self._connected: Optional[bool] = None
+        self._client: MongoClient | None = None
+        self._connected: bool | None = None
 
         # In-memory fallback structures for offline development
-        self._fallback_chats: Dict[str, Dict[str, Any]] = {}
-        self._fallback_laws: Dict[str, Dict[str, Any]] = {}
-        self._fallback_articles: Dict[str, List[Dict[str, Any]]] = {}
-        self._fallback_users: Dict[str, Dict[str, Any]] = {}
-        self._fallback_guest_limits: Dict[str, int] = {}
+        self._fallback_chats: dict[str, dict[str, Any]] = {}
+        self._fallback_laws: dict[str, dict[str, Any]] = {}
+        self._fallback_articles: dict[str, list[dict[str, Any]]] = {}
+        self._fallback_users: dict[str, dict[str, Any]] = {}
+        self._fallback_guest_limits: dict[str, int] = {}
 
-    def get_client(self) -> Optional[MongoClient]:
+    def get_client(self) -> MongoClient | None:
         if self._client is None and self.uri and self._connected is not False:
             try:
                 self._client = MongoClient(
@@ -41,7 +44,7 @@ class MongoConnectionManager:
                 self._client = None
         return self._client
 
-    def check_connection(self) -> Dict[str, Any]:
+    def check_connection(self) -> dict[str, Any]:
         """
         Verify MongoDB connection during lifespan startup and log clear diagnostics.
         """
@@ -80,31 +83,31 @@ class MongoConnectionManager:
             self.get_client()
         return bool(self._connected)
 
-    def get_chats_collection(self) -> Optional[Collection]:
+    def get_chats_collection(self) -> Collection | None:
         client = self.get_client()
         if client is not None:
             return client[self.db_name]["chats"]
         return None
 
-    def get_users_collection(self) -> Optional[Collection]:
+    def get_users_collection(self) -> Collection | None:
         client = self.get_client()
         if client is not None:
             return client[self.db_name]["users"]
         return None
 
-    def get_laws_collection(self) -> Optional[Collection]:
+    def get_laws_collection(self) -> Collection | None:
         client = self.get_client()
         if client is not None:
             return client[self.db_name]["laws"]
         return None
 
-    def get_articles_collection(self) -> Optional[Collection]:
+    def get_articles_collection(self) -> Collection | None:
         client = self.get_client()
         if client is not None:
             return client[self.db_name]["articles"]
         return None
 
-    def get_guest_limits_collection(self) -> Optional[Collection]:
+    def get_guest_limits_collection(self) -> Collection | None:
         client = self.get_client()
         if client is not None:
             return client[self.db_name]["guest_limits"]
