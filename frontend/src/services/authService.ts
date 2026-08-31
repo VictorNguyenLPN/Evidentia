@@ -6,6 +6,7 @@ import type {
     UpdateProfileRequest,
     ChangePasswordRequest
 } from '../types';
+import { API_BASE_URL } from './apiConfig';
 
 const TOKEN_KEY = 'evidentia_auth_token';
 const USER_KEY = 'evidentia_auth_user';
@@ -30,16 +31,16 @@ export const authService = {
     setToken(token: string): void {
         try {
             localStorage.setItem(TOKEN_KEY, token);
-        } catch (e) {
-            console.error('Could not save auth token to localStorage:', e);
+        } catch {
+            // ignore
         }
     },
 
     removeToken(): void {
         try {
             localStorage.removeItem(TOKEN_KEY);
-        } catch (e) {
-            console.error('Could not remove auth token from localStorage:', e);
+        } catch {
+            // ignore
         }
     },
 
@@ -55,16 +56,16 @@ export const authService = {
     setStoredUser(user: User): void {
         try {
             localStorage.setItem(USER_KEY, JSON.stringify(user));
-        } catch (e) {
-            console.error('Could not save user to localStorage:', e);
+        } catch {
+            // ignore
         }
     },
 
     removeStoredUser(): void {
         try {
             localStorage.removeItem(USER_KEY);
-        } catch (e) {
-            console.error('Could not remove user from localStorage:', e);
+        } catch {
+            // ignore
         }
     },
 
@@ -78,7 +79,7 @@ export const authService = {
 
     async getGuestStatus(): Promise<{ authenticated: boolean; user?: User; questions_used: number; remaining: number; limit_reached: boolean }> {
         try {
-            const res = await fetch('/api/auth/guest-status', {
+            const res = await fetch(`${API_BASE_URL}/api/auth/guest-status`, {
                 headers: {
                     ...this.getAuthHeaders()
                 }
@@ -109,7 +110,7 @@ export const authService = {
     },
 
     async login(payload: LoginRequest): Promise<AuthResponse> {
-        const res = await fetch('/api/auth/login', {
+        const res = await fetch(`${API_BASE_URL}/api/auth/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
@@ -130,7 +131,7 @@ export const authService = {
     },
 
     async register(payload: RegisterRequest): Promise<AuthResponse> {
-        const res = await fetch('/api/auth/register', {
+        const res = await fetch(`${API_BASE_URL}/api/auth/register`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
@@ -151,7 +152,7 @@ export const authService = {
     },
 
     async getMe(): Promise<User> {
-        const res = await fetch('/api/auth/me', {
+        const res = await fetch(`${API_BASE_URL}/api/auth/me`, {
             headers: {
                 ...this.getAuthHeaders()
             }
@@ -170,7 +171,7 @@ export const authService = {
     },
 
     async updateProfile(payload: UpdateProfileRequest): Promise<User> {
-        const res = await fetch('/api/auth/profile', {
+        const res = await fetch(`${API_BASE_URL}/api/auth/profile`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
@@ -192,7 +193,7 @@ export const authService = {
     },
 
     async changePassword(payload: ChangePasswordRequest): Promise<{ success: boolean; message: string }> {
-        const res = await fetch('/api/auth/change-password', {
+        const res = await fetch(`${API_BASE_URL}/api/auth/change-password`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

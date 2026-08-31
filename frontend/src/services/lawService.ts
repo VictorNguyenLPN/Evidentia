@@ -4,10 +4,11 @@ import type {
     LawArticlesResponse,
     LawArticleQueryParams
 } from '../types';
+import { API_BASE_URL } from './apiConfig';
 
 export const lawService = {
     async getLawsOverview(): Promise<LawsOverviewResponse> {
-        const res = await fetch('/api/laws');
+        const res = await fetch(`${API_BASE_URL}/api/laws`);
         if (!res.ok) {
             throw new Error(`Failed to fetch laws overview: ${res.statusText}`);
         }
@@ -15,7 +16,7 @@ export const lawService = {
     },
 
     async getLawDetail(documentId: string): Promise<LawDocument | null> {
-        const res = await fetch(`/api/laws/${encodeURIComponent(documentId)}`);
+        const res = await fetch(`${API_BASE_URL}/api/laws/${encodeURIComponent(documentId)}`);
         if (res.status === 404) {
             return null;
         }
@@ -39,7 +40,7 @@ export const lawService = {
             searchParams.set('search', params.search.trim());
         }
 
-        const res = await fetch(`/api/laws/${encodeURIComponent(documentId)}/articles?${searchParams.toString()}`);
+        const res = await fetch(`${API_BASE_URL}/api/laws/${encodeURIComponent(documentId)}/articles?${searchParams.toString()}`);
         if (!res.ok) {
             throw new Error(`Failed to fetch articles for law ${documentId}: ${res.statusText}`);
         }
