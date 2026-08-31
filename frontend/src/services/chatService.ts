@@ -5,10 +5,11 @@ import type {
     ChatStreamEvent
 } from '../types';
 import { authService } from './authService';
+import { API_BASE_URL } from './apiConfig';
 
 export const chatService = {
     async getChats(): Promise<ChatSession[]> {
-        const res = await fetch('/api/chats', {
+        const res = await fetch(`${API_BASE_URL}/api/chats`, {
             headers: {
                 ...authService.getAuthHeaders()
             }
@@ -21,7 +22,7 @@ export const chatService = {
     },
 
     async getChatById(chatId: string): Promise<ChatDocumentResponse | null> {
-        const res = await fetch(`/api/chats/${encodeURIComponent(chatId)}`, {
+        const res = await fetch(`${API_BASE_URL}/api/chats/${encodeURIComponent(chatId)}`, {
             headers: {
                 ...authService.getAuthHeaders()
             }
@@ -43,7 +44,7 @@ export const chatService = {
     },
 
     async toggleShareChat(chatId: string, isShared: boolean): Promise<{ success: boolean; id: string; is_shared: boolean; shared_at?: string }> {
-        const res = await fetch(`/api/chats/${encodeURIComponent(chatId)}/share`, {
+        const res = await fetch(`${API_BASE_URL}/api/chats/${encodeURIComponent(chatId)}/share`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -59,7 +60,7 @@ export const chatService = {
     },
 
     async togglePinChat(chatId: string): Promise<{ is_pinned: boolean }> {
-        const res = await fetch(`/api/chats/${encodeURIComponent(chatId)}/pin`, {
+        const res = await fetch(`${API_BASE_URL}/api/chats/${encodeURIComponent(chatId)}/pin`, {
             method: 'POST',
             headers: {
                 ...authService.getAuthHeaders()
@@ -72,7 +73,7 @@ export const chatService = {
     },
 
     async renameChat(chatId: string, title: string): Promise<{ success: boolean; id: string; title: string }> {
-        const res = await fetch(`/api/chats/${encodeURIComponent(chatId)}/rename`, {
+        const res = await fetch(`${API_BASE_URL}/api/chats/${encodeURIComponent(chatId)}/rename`, {
             method: 'PATCH',
             headers: {
                 'Content-Type': 'application/json',
@@ -87,7 +88,7 @@ export const chatService = {
     },
 
     async deleteChat(chatId: string): Promise<boolean> {
-        const res = await fetch(`/api/chats/${encodeURIComponent(chatId)}`, {
+        const res = await fetch(`${API_BASE_URL}/api/chats/${encodeURIComponent(chatId)}`, {
             method: 'DELETE',
             headers: {
                 ...authService.getAuthHeaders()
@@ -97,7 +98,7 @@ export const chatService = {
     },
 
     async clearAllChats(): Promise<boolean> {
-        const res = await fetch('/api/chats', {
+        const res = await fetch(`${API_BASE_URL}/api/chats`, {
             method: 'DELETE',
             headers: {
                 ...authService.getAuthHeaders()
@@ -114,7 +115,7 @@ export const chatService = {
         onEvent: (event: ChatStreamEvent) => void,
         signal?: AbortSignal
     ): Promise<void> {
-        const res = await fetch('/api/chat/stream', {
+        const res = await fetch(`${API_BASE_URL}/api/chat/stream`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

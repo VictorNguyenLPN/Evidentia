@@ -1,6 +1,8 @@
 import type { AdminUser } from '../types';
 
-const BASE_URL = import.meta.env.VITE_API_URL || '';
+const BASE_URL =
+  import.meta.env.VITE_API_URL ||
+  (import.meta.env.PROD ? 'https://api.evidentia.io.vn' : '');
 
 export const getAuthToken = (): string | null => {
   return localStorage.getItem('evidentia_admin_token');
