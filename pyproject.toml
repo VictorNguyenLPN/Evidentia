@@ -27,12 +27,18 @@ ignore = [
     "B008", # do not perform function calls in argument defaults (FastAPI Depends)
 ]
 
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["E402"]
+
 [tool.ruff.lint.isort]
 known-first-party = ["backend"]
 
 [tool.pytest.ini_options]
 minversion = "8.0"
 addopts = "-ra -q --import-mode=importlib"
+pythonpath = [
+    ".",
+]
 testpaths = [
     "tests",
 ]
