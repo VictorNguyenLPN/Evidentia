@@ -170,7 +170,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </div>
 
               <a
-                href="http://localhost:5173"
+                href={import.meta.env.VITE_USER_APP_URL || "https://evidentia.io.vn"}
                 target="_blank"
                 rel="noreferrer"
                 className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-left cursor-pointer transition-colors"
