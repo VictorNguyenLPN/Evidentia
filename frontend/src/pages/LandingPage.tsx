@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import {
   ArrowRight,
   BookOpen,
@@ -12,108 +12,83 @@ const DEMO_IMAGES = {
 };
 
 export const LandingPage: React.FC = () => {
-  const [isScrolled, setIsScrolled] = useState(false);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 20);
-    };
-
-    handleScroll();
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
   return (
-    <div className="min-h-screen w-full bg-slate-50 text-slate-800 flex flex-col font-sans overflow-x-clip relative selection:bg-indigo-600 selection:text-white">
-      {/* Background Decorative Gradients & Grid */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[1000px] h-[500px] bg-linear-to-b from-indigo-200/40 via-blue-100/20 to-transparent blur-3xl" />
-        <div className="absolute top-[800px] -right-40 w-[600px] h-[600px] bg-indigo-100/30 blur-3xl rounded-full" />
-        <div className="absolute top-[1400px] -left-40 w-[600px] h-[600px] bg-blue-100/30 blur-3xl rounded-full" />
-      </div>
-
-      {/* Top Sticky Navigation Bar - Chỉ thêm border và shadow khi scroll */}
-      <header
-        className={`sticky top-0 z-50 w-full transition-all duration-200 ${isScrolled
-          ? 'bg-slate-50/90 backdrop-blur-md border-b border-slate-200/80 shadow-xs py-4'
-          : 'bg-transparent border-b border-transparent shadow-none py-5'
-          }`}
-      >
-        <div className="w-full max-w-7xl mx-auto px-6 flex items-center justify-between">
-          {/* Brand Logo */}
-          <Link to="/" className="flex flex-col items-start group">
-            <div className="flex items-center gap-2">
-              <span className="text-xl font-bold tracking-tight text-slate-900">
-                <span className="text-indigo-600">Evidentia</span>
-              </span>
-            </div>
-            <p className="text-[11px] text-slate-500 font-medium tracking-wide">Hệ thống trợ lý pháp lý đa tác tử thông minh</p>
-          </Link>
-
-          {/* Navigation Links & Actions */}
-          <div className="flex items-center gap-3 sm:gap-6">
-            <nav className="hidden md:flex items-center gap-5 text-xs font-medium text-slate-600">
-              <a href="#demo-section" className="hover:text-indigo-600 transition-colors">Giao diện</a>
-              <a href="#features-section" className="hover:text-indigo-600 transition-colors">Tính năng nổi bật</a>
-              <Link to="/laws" className="hover:text-indigo-600 transition-colors">Thư viện văn bản</Link>
+    <div className="min-h-screen w-full text-slate-800 flex flex-col overflow-x-clip relative selection:bg-indigo-600 selection:text-white">
+      <div className="h-screen flex flex-col justify-between items-center">
+        <header className="w-full text-sm font-medium py-4 shrink-0">
+          <div className="w-full max-w-7xl mx-auto px-6 flex items-center justify-between">
+            <nav className="flex items-center gap-10 text-slate-600">
+              <Link to="/" className="text-indigo-600 text-xl font-bold">Evidentia</Link>
+              <Link to="/about" className="hover:text-indigo-600 transition-colors">Về chúng tôi</Link>
+              <Link to="/architecture" className="hover:text-indigo-600 transition-colors">Kiến trúc</Link>
+              <Link to="/docs" className="hover:text-indigo-600 transition-colors">Tài liệu</Link>
+              <Link to="/laws" className="hover:text-indigo-600 transition-colors">Thư viện luật</Link>
             </nav>
-
-            <div className="flex items-center gap-2">
+            <nav>
               <Link
                 to="/chats"
-                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-sm shadow-indigo-600/20 hover:shadow-indigo-600/30 hover:scale-[1.02] active:scale-[0.98] transition-all"
+                className="flex items-center gap-2 px-6 py-2 bg-indigo-600 text-white rounded-full hover:bg-indigo-700 cursor-pointer"
               >
-                <span>Bắt đầu hỏi đáp</span>
-                <ArrowRight className="w-3.5 h-3.5" />
+                Trải nghiệm ngay
+                <ArrowRight className="w-4 h-4" />
               </Link>
+            </nav>
+          </div>
+        </header>
+
+        <section className="relative z-10 flex-1 flex flex-col justify-center items-center max-w-5xl mx-auto px-6 text-center pb-8">
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] sm:w-[800px] h-[350px] bg-linear-to-b from-indigo-200/50 via-blue-100/30 to-transparent blur-3xl pointer-events-none -z-10 rounded-full" />
+          <p className="text-slate-600 text-sm sm:text-base md:text-lg max-w-2xl leading-relaxed font-semibold">
+            Hệ thống trợ lý pháp lý đa tác tử
+          </p>
+          <h1 className="mt-5 text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight max-w-4xl leading-[1.15] text-slate-950">
+            Tra cứu và hỏi đáp pháp luật
+          </h1>
+          <p className="mt-5 text-slate-600 text-sm sm:text-base md:text-lg max-w-xl leading-relaxed font-normal">
+            Hệ thống AI tự động tìm kiếm, phân tích và đối chiếu các quy định pháp luật Việt Nam theo từng mốc hiệu lực thời gian.
+          </p>
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
+            <Link
+              to="/chats"
+              className="flex items-center gap-2.5 px-7 py-3.5 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold cursor-pointer"
+            >
+              <span>Trải nghiệm ngay</span>
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+            <Link
+              to="/laws"
+              className="flex items-center gap-2 px-6 py-3.5 rounded-full bg-white hover:bg-slate-100 text-slate-700 text-sm font-medium border border-slate-200 cursor-pointer"
+            >
+              <BookOpen className="w-4 h-4 text-slate-500" />
+              <span>Thư viện văn bản</span>
+            </Link>
+          </div>
+          <div className="mt-12 pt-8 border-t border-slate-200/60 flex flex-wrap items-center justify-center gap-6 sm:gap-10 text-xs font-medium text-slate-500">
+            <div className="flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
+              <span>Suy luận Đa tác tử</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+              <span>Kiểm định Hiệu lực</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+              <span>Trích dẫn Điều Khoản</span>
             </div>
           </div>
-        </div>
-      </header>
+        </section>
+      </div>
 
-      {/* ========================================================= */}
-      {/* HERO SECTION */}
-      {/* ========================================================= */}
-      <section className="relative z-10 min-h-[calc(100vh-73px)] flex flex-col justify-center items-center max-w-5xl mx-auto px-6 pb-16 text-center">
 
-        {/* Big Impactful Title */}
-        <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight max-w-4xl leading-[1.18] text-slate-950">
-          Tra cứu pháp luật{' '}
-          <br className="hidden sm:block" />
-          <span className="bg-linear-to-r from-indigo-600 via-indigo-700 to-blue-600 bg-clip-text text-transparent">
-            Đúng Luật, Đúng Thời Điểm
-          </span>
-        </h1>
-
-        {/* Subtitle Description */}
-        <p className="mt-6 text-slate-600 text-sm sm:text-base md:text-lg max-w-2xl leading-relaxed font-normal">
-          Hệ thống đa tác tử giúp tra cứu và phân tích pháp luật Việt Nam chính xác theo từng thời điểm, đối chiếu phiên bản và tổng hợp căn cứ pháp lý minh bạch.
-        </p>
-
-        {/* Center Hero Actions */}
-        <div className="mt-9 flex flex-wrap items-center justify-center gap-3.5">
-          <Link
-            to="/chats"
-            className="flex items-center gap-2.5 px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold shadow-lg shadow-indigo-600/25 hover:shadow-indigo-600/35 hover:-translate-y-0.5 active:translate-y-0 transition-all"
-          >
-            <span>Trải nghiệm hỏi đáp ngay</span>
-            <ArrowRight className="w-4 h-4" />
-          </Link>
-        </div>
-      </section>
-
-      {/* ========================================================= */}
-      {/* SECTION 1: DEMO MÀN HÌNH GIAO DIỆN (OVERLAPPING MOCKUPS) */}
-      {/* ========================================================= */}
-      <section id="demo-section" className="relative z-10 pt-40 pb-20 px-6 mx-auto w-full bg-slate-100">
+      <section id="demo-section" className="min-h-screen flex flex-col justify-center items-center z-10 py-24 px-6 mx-auto w-full bg-slate-100">
         {/* Section Header */}
-        <div className="text-center max-w-4xl mx-auto mb-6">
+        <div className="text-center max-w-3xl mx-auto mb-6">
           <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
-            Theo dõi từng bước suy luận & đối chiếu văn bản
+            Theo dõi quy trình suy luận
           </h2>
           <p className="mt-3 text-slate-600 text-sm sm:text-base leading-relaxed">
-            Giao diện được thiết kế tối ưu cho các chuyên gia và người dùng cần câu trả lời pháp lý chuẩn xác,
+            Giao diện được thiết kế tối ưu cho người dùng cần câu trả lời pháp lý chuẩn xác,
             kèm theo toàn bộ bằng chứng và chuỗi lập luận minh bạch.
           </p>
         </div>
@@ -175,18 +150,15 @@ export const LandingPage: React.FC = () => {
         </div>
       </section>
 
-      {/* ========================================================= */}
-      {/* SECTION 2: TÍNH NĂNG NỔI BẬT (FEATURES SHOWCASE) */}
-      {/* ========================================================= */}
-      <section id="features-section" className="relative z-10 pt-40 py-20 px-6 max-w-7xl mx-auto w-full border-t border-slate-200/80">
+      <section id="features-section" className="min-h-screen flex flex-col justify-center z-10 py-24 px-6 mx-auto max-w-7xl w-full">
         {/* Section Header */}
         <div className="text-center max-w-3xl mx-auto mb-16">
           <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
-            Giải quyết các bài toán pháp lý phức tạp với AI
+            Giải quyết bài toán pháp lý phức tạp
           </h2>
           <p className="mt-3 text-slate-600 text-sm sm:text-base leading-relaxed">
-            Evidentia kết hợp mô hình ngôn ngữ lớn tiên tiến cùng hệ thống đa tác tử chuyên biệt,
-            giúp loại bỏ ảo giác và mang lại kết quả tra cứu pháp luật có giá trị thực tiễn.
+            Evidentia kết hợp mô hình ngôn ngữ lớn được huấn luyện chuyện biệt cùng hệ thống đa tác tử,
+            giúp loại bỏ ảo giác và mang lại kết quả đáng tin cậy
           </p>
         </div>
 
@@ -196,7 +168,7 @@ export const LandingPage: React.FC = () => {
           <div className="group relative p-7 rounded-2xl bg-white border border-slate-200/80 hover:border-indigo-300 shadow-xs hover:shadow-xl hover:shadow-indigo-500/5 transition-all duration-300 flex flex-col justify-between">
             <div>
               <h3 className="text-lg font-bold text-slate-900 mb-2.5 group-hover:text-indigo-600 transition-colors">
-                Suy luận Đa tác tử Phối hợp
+                Suy luận Đa tác tử
               </h3>
               <p className="text-slate-600 text-xs sm:text-sm leading-relaxed">
                 Chuỗi tác tử độc lập phân công nhiệm vụ: Lập kế hoạch truy xuất, Tìm kiếm điều khoản, Kiểm định hiệu lực thời gian và Tổng hợp giải trình chặt chẽ.
@@ -263,7 +235,7 @@ export const LandingPage: React.FC = () => {
             <div>
 
               <h3 className="text-lg font-bold text-slate-900 mb-2.5 group-hover:text-indigo-600 transition-colors">
-                Trích dẫn Căn cứ Pháp lý 100%
+                Trích dẫn Căn cứ Pháp lý
               </h3>
               <p className="text-slate-600 text-xs sm:text-sm leading-relaxed">
                 Mọi kết luận đều đi kèm liên kết trực tiếp tới Chương, Mục, Điều, Khoản cụ thể của văn bản quy phạm pháp luật ban hành chính thức.
@@ -280,7 +252,7 @@ export const LandingPage: React.FC = () => {
             <div>
 
               <h3 className="text-lg font-bold text-slate-900 mb-2.5 group-hover:text-indigo-600 transition-colors">
-                Thư viện Văn bản Cấu trúc hóa
+                Văn bản cập nhật liên tục
               </h3>
               <p className="text-slate-600 text-xs sm:text-sm leading-relaxed">
                 Cơ sở dữ liệu văn bản được tổ chức theo cây phân cấp điều hướng thông minh, hỗ trợ tìm kiếm nhanh, đọc toàn văn và lọc theo trạng thái hiệu lực.
@@ -294,56 +266,50 @@ export const LandingPage: React.FC = () => {
         </div>
       </section>
 
-      {/* ========================================================= */}
-      {/* CALL TO ACTION BANNER */}
-      {/* ========================================================= */}
-      <section className="relative z-10 py-20 w-full bg-slate-100">
-        <div className='flex items-center justify-center w-full'>
-          <div className="relative overflow-hidden max-w-7xl w-full rounded-3xl bg-linear-to-r from-slate-900 via-indigo-950 to-slate-900 text-white p-8 sm:p-12 text-center border border-slate-800 shadow-2xl shadow-indigo-950/20">
-            {/* Decorative subtle circle glows */}
-            <div className="absolute -top-24 -left-24 w-64 h-64 bg-indigo-500/20 rounded-full blur-3xl" />
-            <div className="absolute -bottom-24 -right-24 w-64 h-64 bg-blue-500/20 rounded-full blur-3xl" />
+      <section className="relative z-10 py-20 px-6 w-full bg-slate-100 flex items-center justify-center">
+        <div className="w-full max-w-6xl rounded-3xl bg-linear-to-r from-slate-900 via-indigo-950 to-slate-900 text-white py-16 px-6 sm:px-12 text-center border border-slate-800 shadow-2xl shadow-indigo-950/20 relative overflow-hidden">
+          {/* Decorative subtle circle glows */}
+          <div className="absolute -top-24 -left-24 w-64 h-64 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute -bottom-24 -right-24 w-64 h-64 bg-blue-500/20 rounded-full blur-3xl pointer-events-none" />
 
-            <div className="relative z-10 max-w-7xl mx-auto space-y-4">
-              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight">
-                Sẵn sàng trải nghiệm trợ lý pháp lý AI thế hệ mới?
-              </h2>
-              <p className="text-slate-300 text-xs sm:text-sm md:text-base leading-relaxed">
-                Bắt đầu hỏi đáp pháp lý ngay hôm nay với hệ thống suy luận đa tác tử thông minh của Evidentia.
-              </p>
-              <div className="pt-4 flex flex-wrap items-center justify-center gap-3.5">
-                <Link
-                  to="/chats"
-                  className="flex items-center gap-2 px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold shadow-lg shadow-indigo-600/30 transition-all hover:scale-105"
-                >
-                  <span>Bắt đầu hỏi đáp miễn phí</span>
-                  <ArrowRight className="w-4 h-4" />
-                </Link>
-                <Link
-                  to="/laws"
-                  className="flex items-center gap-2 px-5 py-3 rounded-xl bg-slate-800/80 hover:bg-slate-800 text-slate-200 text-sm font-medium border border-slate-700 transition-all"
-                >
-                  <BookOpen className="w-4 h-4 text-slate-400" />
-                  <span>Xem thư viện văn bản</span>
-                </Link>
-              </div>
+          <div className="relative z-10 max-w-3xl mx-auto space-y-4">
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight">
+              Sẵn sàng trải nghiệm trợ lý pháp lý thế hệ mới?
+            </h2>
+            <p className="text-slate-300 text-xs sm:text-sm md:text-base leading-relaxed">
+              Bắt đầu hỏi đáp pháp lý ngay hôm nay với hệ thống suy luận đa tác tử thông minh của Evidentia.
+            </p>
+            <div className="pt-4 flex flex-wrap items-center justify-center gap-4">
+              <Link
+                to="/chats"
+                className="flex items-center gap-2.5 px-7 py-3.5 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold cursor-pointer"
+              >
+                <span>Bắt đầu hỏi đáp miễn phí</span>
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+              <Link
+                to="/laws"
+                className="flex items-center gap-2 px-6 py-3.5 rounded-full bg-white hover:bg-slate-100 text-slate-700 text-sm font-medium border border-slate-200 cursor-pointer"
+              >
+                <BookOpen className="w-4 h-4 text-slate-500" />
+                <span>Xem thư viện văn bản</span>
+              </Link>
             </div>
           </div>
         </div>
       </section>
 
-      {/* ========================================================= */}
-      {/* FOOTER */}
-      {/* ========================================================= */}
-      <footer className="relative z-10 w-full max-w-7xl mx-auto px-6 py-8 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 border-t border-slate-200/80 gap-4">
-        <div className="flex flex-col sm:flex-row items-center gap-2 text-center sm:text-left">
-          <span className="text-slate-700">Evidentia © 2026 - Hệ thống trợ lý pháp lý đa tác tử thông minh</span>
-        </div>
-        <div className="flex items-center gap-5 font-medium text-slate-600">
-          <Link to="/laws" className="hover:text-indigo-600 transition-colors">Thư viện luật</Link>
-          <Link to="/chats" className="hover:text-indigo-600 transition-colors">Hỏi đáp</Link>
-          <span className="hover:text-slate-900 transition-colors cursor-pointer">Bảo mật</span>
-          <span className="hover:text-slate-900 transition-colors cursor-pointer">Về dự án</span>
+      <footer className="w-full bg-white mt-auto">
+        <div className="max-w-7xl mx-auto px-6 py-8 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-4">
+          <div className="flex flex-col sm:flex-row items-center gap-2 text-center sm:text-left">
+            <span className="text-slate-700">Evidentia © 2026 - Hệ thống trợ lý pháp lý đa tác tử thông minh</span>
+          </div>
+          <div className="flex items-center gap-5 font-medium text-slate-600">
+            <Link to="/about" className="hover:text-indigo-600 transition-colors">Về chúng tôi</Link>
+            <Link to="/architecture" className="hover:text-indigo-600 transition-colors">Kiến trúc</Link>
+            <Link to="/docs" className="hover:text-slate-900 transition-colors cursor-pointer">Tài liệu</Link>
+            <Link to="/laws" className="hover:text-slate-900 transition-colors cursor-pointer">Thư viện luật</Link>
+          </div>
         </div>
       </footer>
     </div>
