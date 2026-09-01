@@ -14,3 +14,4 @@ export * from './LawArticleCard';
 export * from './LawChapterSidebar';
 export * from './AuthModal';
 export * from './ShareModal';
+export * from './TechStackMarquee';
