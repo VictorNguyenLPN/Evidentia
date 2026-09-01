@@ -45,7 +45,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
             if (saved !== null) {
                 return saved === 'true';
             }
-            return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+            return false;
         } catch {
             return false;
         }

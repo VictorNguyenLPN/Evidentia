@@ -46,12 +46,6 @@ export const LandingPage: React.FC = () => {
             </div>
             <nav className="flex items-center gap-3">
               <Link
-                to="/laws"
-                className="md:hidden text-xs font-medium text-slate-600 hover:text-indigo-600 px-2 py-1"
-              >
-                Thư viện
-              </Link>
-              <Link
                 to="/chats"
                 className="flex items-center gap-1.5 sm:gap-2 px-4 sm:px-6 py-2 bg-indigo-600 text-white rounded-full hover:bg-indigo-700 transition-colors shadow-xs text-xs sm:text-sm font-semibold"
               >
@@ -100,7 +94,7 @@ export const LandingPage: React.FC = () => {
         <div className="text-center max-w-4xl mx-auto mb-4 sm:mb-5 shrink-0">
           <h2
             id="demo-section-title"
-            className="text-2xl sm:text-3xl lg:text-4xl font-semibold tracking-[-0.03em] text-slate-950 dark:text-white"
+            className="text-2xl sm:text-3xl lg:text-4xl font-semibold tracking-[-0.03em] text-slate-950"
           >
             Suy luận và Trả lời có kiểm chứng
           </h2>
@@ -143,7 +137,7 @@ export const LandingPage: React.FC = () => {
         <div className="text-center max-w-3xl mx-auto mb-6 sm:mb-8 lg:mb-10 shrink-0">
           <h2
             id="feature-section-title"
-            className="text-2xl sm:text-3xl lg:text-4xl font-semibold tracking-[-0.03em] text-slate-950 dark:text-white"
+            className="text-2xl sm:text-3xl lg:text-4xl font-semibold tracking-[-0.03em] text-slate-950"
           >
             Tính năng cốt lõi
           </h2>

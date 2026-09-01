@@ -354,7 +354,7 @@ export const TechStackMarquee: React.FC = () => {
         <div className="mx-auto max-w-3xl px-2 sm:px-6 text-center mb-6 sm:mb-8 lg:mb-10 shrink-0">
           <h2
             id="tech-stack-title"
-            className="text-2xl sm:text-3xl lg:text-4xl font-semibold tracking-[-0.03em] text-slate-950 dark:text-white"
+            className="text-2xl sm:text-3xl lg:text-4xl font-semibold tracking-[-0.03em] text-slate-950"
           >
             Nền tảng công nghệ phía sau hệ thống
           </h2>
