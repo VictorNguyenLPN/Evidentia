@@ -1,10 +1,5 @@
 <div align="center">
 
-# Evidentia
-
-**Hệ thống trợ lý đa tác tử thông minh chuyên sâu Pháp luật Việt Nam**  
-**Legal Agentic-GraphRAG System for Vietnamese Law**
-
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="assets/logo-white.svg">
@@ -13,127 +8,74 @@
   </picture>
 </p>
 
-[Tiếng Việt](#tiếng-việt) | [English](#english)
+# Evidentia
+
+**Hệ thống trợ lý đa tác tử thông minh chuyên sâu Pháp luật Việt Nam**
+
+🇻🇳 Tiếng Việt | 🏴󠁧󠁢󠁥󠁮󠁧󠁿 [English](README.en.md)
 
 </div>
 
 ---
 
-## Tiếng Việt
+## 1. Giới thiệu tổng quan
 
-### 1. Giới thiệu tổng quan
+Evidentia là nền tảng trợ lý pháp lý ứng dụng kiến trúc đa tác tử kết hợp Đồ thị tri thức và kỹ thuật GraphRAG, được thiết kế chuyên sâu cho hệ thống văn bản quy phạm pháp luật Việt Nam.
 
-Evidentia là hệ thống trợ lý thông minh ứng dụng kiến trúc đa tác tử (Multi-Agent System) kết hợp cùng Đồ thị tri thức Pháp lý và kỹ thuật GraphRAG (Legal Agentic-GraphRAG), được thiết kế chuyên biệt cho hệ thống văn bản quy phạm pháp luật Việt Nam.
+Trong bối cảnh pháp lý, việc ứng dụng trực tiếp các mô hình ngôn ngữ lớn thường bộc lộ những rào cản kỹ thuật cơ bản:
+- Nguy cơ sinh ảo giác, đưa ra căn cứ pháp lý sai lệch hoặc viện dẫn các điều khoản không có thực.
+- Khó kiểm soát mạng lưới văn bản quy phạm pháp luật chằng chéo với nhiều tầng quan hệ: sửa đổi, bổ sung, thay thế, bãi bỏ và hướng dẫn thi hành.
+- Khó bảo đảm khả năng kiểm chứng và trích dẫn chuẩn xác đến từng Điều, Khoản, Điểm gắn liền với văn bản còn hiệu lực thi hành.
 
-Trong lĩnh vực pháp lý, các mô hình ngôn ngữ lớn (LLM) thông thường thường gặp phải nhiều hạn chế nghiêm trọng:
-- Nguy cơ ảo giác (hallucination) dẫn đến các viện dẫn sai lệch hoặc không có thật.
-- Khó nắm bắt hệ thống văn bản đồ sộ với các mối quan hệ đa tầng (văn bản sửa đổi, bổ sung, bãi bỏ, hướng dẫn thi hành).
-- Thiếu khả năng đối chiếu và trích dẫn chuẩn xác đến từng điều khoản cụ thể.
+Evidentia khắc phục các hạn chế này bằng cách tích hợp đồ thị tri thức pháp lý vào quy trình suy luận đa tác tử, đảm bảo mọi phản hồi đều có căn cứ vững chắc, đúng quy định hiện hành và có thể kiểm chứng nguồn gốc.
 
-Evidentia giải quyết các thách thức trên bằng cách tích hợp đồ thị quan hệ văn bản pháp lý với quy trình suy luận đa tác tử, đảm bảo mọi phản hồi đều có căn cứ pháp lý rõ ràng, cập nhật và có thể kiểm chứng.
+## 2. Các định hướng và tính năng dự kiến
 
-### 2. Các tính năng cốt lõi dự kiến
+Evidentia được thiết kế phục vụ công tác nghiên cứu, tra cứu và hỗ trợ tư vấn pháp luật với các nhóm tính năng chính:
 
-Evidentia được xây dựng nhằm cung cấp một giải pháp toàn diện phục vụ việc nghiên cứu, tra cứu và hỗ trợ tư vấn pháp luật:
+### Quy trình điều phối đa tác tử
+- Phân tích và phân rã truy vấn: Tách các tình huống pháp lý phức tạp thành các vấn đề độc lập để xử lý song song.
+- Định tuyến truy xuất chuyên biệt: Phân bổ yêu cầu tra cứu tới đúng phân vùng dữ liệu và cơ chế tìm kiếm phù hợp.
+- Tổng hợp và đối soát căn cứ: Kiểm tra chéo điều kiện áp dụng, đối chiếu tình trạng hiệu lực và xây dựng lập luận pháp lý chặt chẽ.
 
-- Quy trình làm việc đa tác tử (Multi-Agent Workflow):
-  - Tác tử phân tích yêu cầu (Query Analysis Agent): Phân rã câu hỏi phức tạp thành các chủ đề pháp lý độc lập.
-  - Tác tử truy xuất pháp luật (Legal Retrieval Agent): Khai thác dữ liệu từ cơ sở tri thức pháp lý thông qua cơ chế tìm kiếm lai (Hybrid Search).
-  - Tác tử tổng hợp và thẩm định (Synthesis & Verification Agent): Rà soát tính còn hiệu lực của văn bản và xây dựng câu trả lời kèm căn cứ điều luật chính xác.
+### Đồ thị tri thức pháp lý và GraphRAG
+- Mô hình hóa thứ bậc hiệu lực trong hệ thống văn bản quy phạm pháp luật gồm Hiến pháp, Bộ luật, Luật, Nghị định và Thông tư.
+- Quản lý chặt chẽ mạng lưới quan hệ liên văn bản: sửa đổi, bổ sung, thay thế, bãi bỏ, đình chỉ hiệu lực và hướng dẫn thi hành.
 
-- Đồ thị tri thức Pháp luật (Legal Knowledge Graph & GraphRAG):
-  - Mô hình hóa phân cấp pháp lý từ Hiến pháp, Bộ luật, Luật đến Nghị định, Thông tư.
-  - Quản lý các mối quan hệ liên văn bản như sửa đổi, bổ sung, hướng dẫn, dẫn chiếu và thay thế.
+### Cơ chế truy xuất kết hợp
+- Tích hợp tìm kiếm ngữ nghĩa theo vector, tìm kiếm từ khóa chính xác qua BM25 và duyệt liên kết trên đồ thị tri thức nhằm tối ưu đồng thời độ phủ lẫn độ chuẩn xác của tài liệu viện dẫn.
 
-- Truy xuất thông tin lai (Hybrid Retrieval Engine):
-  - Kết hợp tìm kiếm ngữ nghĩa (Semantic Embedding), tìm kiếm từ khóa chính xác (BM25) và duyệt đồ thị (Graph Traversal) nhằm tối ưu độ chính xác và độ phủ thông tin.
+### Dẫn chứng minh bạch đến cấp độ điều khoản
+- Mọi luận điểm trong câu trả lời đều gắn liền với căn cứ pháp lý cụ thể: tên văn bản, số ký hiệu, ngày ban hành cùng Điều, Khoản, Điểm tương ứng.
 
-- Trích dẫn minh bạch và chống ảo giác:
-  - Mọi câu trả lời đều được định danh cụ thể: Điều, Khoản, Điểm cùng số hiệu văn bản pháp quy liên quan.
+### Tra cứu và theo dõi văn bản pháp luật
+- Cung cấp giao diện tra cứu trực quan, hỗ trợ xem cây mục lục cấu trúc, biểu đồ quan hệ hiệu lực và trạng thái áp dụng theo thời gian thực.
 
-- Khám phá văn bản pháp lý thông minh:
-  - Cung cấp giao diện tra cứu trực quan, hỗ trợ xem trước nội dung điều khoản và theo dõi trạng thái hiệu lực theo thời gian thực.
+### Hỏi đáp và hỗ trợ thủ tục pháp lý
+- Hỗ trợ làm rõ quy định, tra cứu trình tự thủ tục hành chính và gợi ý căn cứ áp dụng cho người dân, doanh nghiệp và người làm công tác pháp luật.
 
-- Hỗ trợ hỏi đáp và tư vấn tự động:
-  - Hỗ trợ công dân, doanh nghiệp và các chuyên viên pháp lý giải đáp thắc mắc về quy định, thủ tục hành chính và tuân thủ quy phạm.
+## 3. Đăng ký trải nghiệm sớm
 
-### 3. Đăng ký nhận thông tin sớm
+Hệ thống hiện đang trong giai đoạn hoàn thiện để chuẩn bị cho đợt thử nghiệm diện rộng.
 
-Cổng thông tin đăng ký trải nghiệm sớm của Evidentia hiện đã được mở tại:
+Người quan tâm có thể đăng ký nhận thông báo tại cổng thông tin chính thức:
 
 [https://evidentia.io.vn](https://evidentia.io.vn)
-
-Quý người dùng có thể gửi địa chỉ email để trở thành một trong những người đầu tiên nhận thông báo khi hệ thống bắt đầu thử nghiệm thực tế.
 
 <p align="center">
   <img src="assets/early-access-preview.png" alt="Evidentia Early Access Preview" width="850">
 </p>
 
----
+## 4. Tình trạng mã nguồn
 
-## English
+Toàn bộ mã nguồn, dữ liệu huấn luyện và hạ tầng dịch vụ của Evidentia hiện được quản lý trong kho lưu trữ nội bộ phục vụ công tác nghiên cứu và phát triển.
 
-### 1. Overview
-
-Evidentia is an intelligent legal assistant leveraging a Multi-Agent architecture combined with a Legal Knowledge Graph and GraphRAG (Legal Agentic-GraphRAG), specifically tailored for the Vietnamese legal system.
-
-In legal applications, standard Large Language Models (LLMs) often exhibit critical shortcomings:
-- Susceptibility to hallucinations, producing fabricated legal citations or incorrect advice.
-- Difficulty navigating interconnected normative documents with multi-level dependencies (amendments, replacements, guiding decrees, circulars).
-- Inability to verify and cite exact articles and clauses reliably.
-
-Evidentia addresses these issues by grounding language models with a structured legal knowledge graph and a coordinated multi-agent reasoning pipeline, ensuring transparent, reliable, and auditable responses.
-
-### 2. Planned Capabilities
-
-Evidentia is engineered to provide a robust solution for legal research, compliance checks, and automated assistance:
-
-- Multi-Agent Orchestration Workflow:
-  - Query Analysis Agent: Decomposes intricate legal queries into modular legal sub-topics.
-  - Legal Retrieval Agent: Dispatches targeted queries across hybrid search indexes to identify relevant provisions.
-  - Synthesis & Verification Agent: Validates document validity status, cross-checks conditions, and formulates grounded responses.
-
-- Legal Knowledge Graph & GraphRAG:
-  - Formal ontological representation of Vietnamese normative hierarchies (Constitution, Codes, Laws, Decrees, Circulars).
-  - Explicit tracking of inter-document relations including amends, guides, supersedes, and cites.
-
-- Hybrid Retrieval Engine:
-  - Integration of dense semantic embeddings, sparse lexical retrieval (BM25), and structural graph traversal for high recall and precision.
-
-- Grounded Citations & Anti-Hallucination Guardrails:
-  - Output contains verifiable citations referencing specific Articles, Clauses, and Points alongside official document reference IDs.
-
-- Intelligent Legal Document Exploration:
-  - Interactive interface for searching, previewing, and tracking the validity status of normative acts in real time.
-
-- Automated Legal Inquiry & Compliance Guidance:
-  - Assists citizens, enterprises, and legal practitioners with administrative procedures and statutory inquiries.
-
-### 3. Early Access & Pre-registration
-
-The pre-registration portal for Evidentia is available at:
-
-[https://evidentia.io.vn](https://evidentia.io.vn)
-
-Interested users can register their email address to receive early invitations and launch updates once the testing phase begins.
-
-<!-- Placeholder for screenshot captured from evidentia.io.vn -->
-<p align="center">
-  <img src="assets/early-access-preview.png" alt="Evidentia Early Access Preview" width="850">
-</p>
-
-*Note: Replace `assets/early-access-preview.png` with your actual capture of the registration screen from evidentia.io.vn.*
-
-### 4. Source Code & Development Notice
-
-The core source code of Evidentia—including the multi-agent backend, LangGraph state workflows, and knowledge graph ingestion pipelines—is maintained in a private repository.
-
-This public repository serves as the project overview, architectural summary, and official announcement channel.
+Kho lưu trữ GitHub này đóng vai trò là cổng thông tin chính thức, cung cấp tài liệu kỹ thuật tổng quan và cập nhật tiến độ phát hành của dự án.
 
 ---
 
-## Liên hệ & Thông tin / Contact & Inquiries
+## Liên hệ
 
-- Official Portal: [https://evidentia.io.vn](https://evidentia.io.vn)
-- Development Unit: NLP & KD Lab
-- Maintainer: Victor Nguyen ([VictorNguyenLPN](https://github.com/VictorNguyenLPN))
+- Cổng thông tin: [https://evidentia.io.vn](https://evidentia.io.vn)
+- Đơn vị nghiên cứu: NLP & KD Lab
+- Quản trị dự án: Victor Nguyen ([VictorNguyenLPN](https://github.com/VictorNguyenLPN))
